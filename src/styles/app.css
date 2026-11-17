@@ -1,0 +1,202 @@
+:root {
+  --v-font-body: "IBM Plex Sans Thai", "Leelawadee UI", "Segoe UI", sans-serif;
+  --v-font-heading: "Noto Serif Thai", "Leelawadee UI", serif;
+}
+
+html,
+body,
+.v-application {
+  font-family: var(--v-font-body);
+  letter-spacing: 0;
+}
+
+.v-application .text-body-large,
+.v-application .text-body-medium,
+.v-application .text-body-small,
+.v-application .text-headline-large,
+.v-application .text-headline-medium,
+.v-application .text-headline-small,
+.v-application .text-display-small,
+.v-application .text-title-large,
+.v-application .text-title-medium,
+.v-btn {
+  letter-spacing: 0;
+}
+
+.v-card-title,
+.v-card-subtitle,
+.v-list-item-title,
+.v-list-item-subtitle {
+  white-space: normal;
+}
+
+.display-thai {
+  font-family: var(--v-font-heading);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.line-screen {
+  background:
+    radial-gradient(900px 480px at 100% -10%, rgba(6, 199, 85, 0.16), transparent 55%),
+    radial-gradient(700px 420px at -10% 100%, rgba(14, 107, 98, 0.16), transparent 50%),
+    #efe6d8;
+}
+
+.phone {
+  width: min(100%, 380px);
+  height: min(740px, calc(100dvh - 48px));
+  border: 10px solid #241c16;
+  border-radius: 36px;
+  background: #241c16;
+  box-shadow: 0 24px 60px rgba(36, 28, 22, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.phone-status {
+  background: #111;
+  color: white;
+  text-align: center;
+  font-size: 12px;
+  padding: 6px 0 4px;
+}
+
+.phone-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #06c755;
+  color: white;
+  padding: 8px 12px 10px;
+}
+
+.phone-bar-app {
+  background: #0e6b62;
+}
+
+.phone-screen {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: #efe6d8;
+  padding: 12px;
+}
+
+.phone-sub {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.phone-chat {
+  flex: 1;
+  overflow: auto;
+  background: #d7e6f2;
+  padding: 14px 12px 8px;
+}
+
+.bubble {
+  max-width: 88%;
+  padding: 10px 12px;
+  line-height: 1.45;
+  font-size: 14px;
+}
+
+.bubble-oa {
+  background: white;
+  color: #241c16;
+  border-radius: 16px 16px 16px 4px;
+}
+
+.bubble-me {
+  background: #95ec69;
+  color: #17300d;
+  border-radius: 16px 16px 4px 16px;
+  margin-left: auto;
+}
+
+.bubble-time {
+  font-size: 11px;
+  color: #4d5d6b;
+  margin: 4px 0 10px;
+}
+
+.bubble-time.me {
+  text-align: right;
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick button,
+.rich-menu button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.quick button {
+  border: 0;
+  background: white;
+  color: #0e6b62;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 600;
+}
+
+.rich-menu {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: white;
+  border-top: 1px solid #ece7df;
+}
+
+.rich-menu button {
+  border: 0;
+  background: white;
+  color: #241c16;
+  padding: 10px 4px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.rich-menu button:hover,
+.quick button:hover {
+  background: #f6f1e8;
+}
+
+.line-card {
+  max-width: 100%;
+  margin: 4px 0 2px;
+}
+
+.route-line {
+  height: 2px;
+  background: linear-gradient(90deg, #0e6b62, #d4654a);
+  border-radius: 99px;
+}
+
+.lift {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(36, 28, 22, 0.08);
+}
+
+.demo-panel {
+  border: 1px dashed rgba(36, 28, 22, 0.28);
+  background: transparent;
+}

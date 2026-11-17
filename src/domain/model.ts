@@ -1,0 +1,407 @@
+import type { NeedId, ProviderTier, Quote, ServiceType, ShareBasis, Trip, TripStatus, VisitNote, FamilyMember } from '@/domain/types'
+
+export const FAMILY = {
+  displayName: 'คุณนภา วงศ์สุข',
+  lineName: 'คุณนภา',
+  pickup: '128/4 ซอยลาดพร้าว 41 แขวงจรเข้บัว เขตลาดพร้าว กรุงเทพฯ',
+  lat: 13.7928,
+  lng: 100.5852,
+  memberId: 'rel-napa',
+}
+
+export const FAMILY_MEMBERS: FamilyMember[] = [
+  { id: 'rel-napa', name: 'คุณนภา วงศ์สุข', relation: 'ลูกสาว', maskedId: 'x-xxxx-xxxxx-12-3' },
+  { id: 'rel-pawit', name: 'คุณภาวิช วงศ์สุข', relation: 'ลูกชาย', maskedId: 'x-xxxx-xxxxx-45-6' },
+]
+
+export const SELF_CAREGIVER_ID = 'cg-ann'
+
+export const PROVIDER_THAID: FamilyMember = {
+  id: SELF_CAREGIVER_ID,
+  name: 'แอนธิรา สุขใจ',
+  relation: 'ผู้ให้บริการ',
+  maskedId: 'x-xxxx-xxxxx-78-9',
+}
+
+export const DEPARTMENTS = [
+  'อายุรกรรม',
+  'โรคหัวใจ',
+  'จักษุ',
+  'กระดูกและข้อ',
+  'ระบบประสาท',
+  'หู คอ จมูก',
+  'กายภาพบำบัด',
+  'ตรวจสุขภาพ',
+]
+
+export const TIME_SLOTS = ['07:30', '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00']
+
+export const BOOKABLE_SERVICES: ServiceType[] = ['full', 'fullday']
+export const OVERTIME_CAP = 150
+
+export const SERVICES: Record<
+  ServiceType,
+  { label: string; short: string; detail: string; base: number; hours: string; icon: string; overtimeCap?: number }
+> = {
+  full: {
+    label: 'อยู่ดูแลที่โรงพยาบาลตลอดนัด',
+    short: 'พาไปหาหมอ',
+    detail: 'อยู่ดูแลที่โรงพยาบาลตลอดนัดนี้ พบแพทย์ด้วยกัน',
+    base: 1000,
+    hours: 'ประมาณ 5–6 ชั่วโมง',
+    icon: 'mdi-hospital-building',
+    overtimeCap: OVERTIME_CAP,
+  },
+  dropoff: {
+    label: 'พาไปส่งโรงพยาบาล',
+    short: 'ไปส่ง',
+    detail: 'รับจากบ้าน ส่งถึงแผนก และส่งมอบให้เจ้าหน้าที่',
+    base: 420,
+    hours: 'ประมาณ 1.5 ชั่วโมง',
+    icon: 'mdi-walk',
+  },
+  pickup: {
+    label: 'ไปรับกลับบ้าน',
+    short: 'ไปรับกลับ',
+    detail: 'ไปรอที่โรงพยาบาล แล้วพากลับถึงบ้าน',
+    base: 420,
+    hours: 'ประมาณ 1.5 ชั่วโมง',
+    icon: 'mdi-home-import-outline',
+  },
+  fullday: {
+    label: 'อยู่ดูแลที่โรงพยาบาลทั้งวัน',
+    short: 'อยู่เป็นเพื่อน',
+    detail: 'อยู่ดูแลที่โรงพยาบาลทั้งวัน เมื่อมีหลายแผนกหรือรอนาน',
+    base: 1500,
+    hours: 'ทั้งวันที่โรงพยาบาล',
+    icon: 'mdi-clock-outline',
+  },
+}
+
+export const NEED_OPTIONS: { id: NeedId; label: string; icon: string; group: 'care' | 'prefer' }[] = [
+  { id: 'cane', label: 'ใช้ไม้เท้า เดินช้า', icon: 'mdi-walk', group: 'care' },
+  { id: 'wheelchair', label: 'ใช้รถเข็น', icon: 'mdi-wheelchair', group: 'care' },
+  { id: 'transfer', label: 'ต้องพยุงหรือยกตัว', icon: 'mdi-hand-heart', group: 'care' },
+  { id: 'memory', label: 'หลงลืม ต้องมีคนอยู่ใกล้', icon: 'mdi-brain', group: 'care' },
+  { id: 'meds', label: 'ดูแลยาและอาหารตามเวลา', icon: 'mdi-pill', group: 'care' },
+  { id: 'hearing', label: 'ได้ยินไม่ชัด', icon: 'mdi-ear-hearing', group: 'care' },
+  { id: 'female', label: 'ขอผู้ดูแลเพศหญิง', icon: 'mdi-human-female', group: 'prefer' },
+  { id: 'male', label: 'ขอผู้ดูแลเพศชาย', icon: 'mdi-human-male', group: 'prefer' },
+  { id: 'chinese', label: 'ต้องการคนพูดภาษาจีน', icon: 'mdi-translate', group: 'prefer' },
+  { id: 'updates', label: 'รายงานครอบครัวระหว่างรอ', icon: 'mdi-message-text-outline', group: 'prefer' },
+]
+
+const SHORT_NEED: Record<NeedId, string> = {
+  cane: 'การเดินช้า',
+  wheelchair: 'รถเข็น',
+  transfer: 'การพยุงตัว',
+  memory: 'อาการหลงลืม',
+  meds: 'ยาตามเวลา',
+  hearing: 'การได้ยิน',
+  female: 'เพศหญิง',
+  male: 'เพศชาย',
+  chinese: 'ภาษาจีน',
+  updates: 'รายงานระหว่างรอ',
+}
+
+export function needLabel(id: NeedId) {
+  return NEED_OPTIONS.find(item => item.id === id)?.label ?? id
+}
+
+export function shortNeed(id: NeedId) {
+  return SHORT_NEED[id]
+}
+
+export function quote(service: ServiceType, priceFactor: number): Quote {
+  const serviceFee = Math.round(SERVICES[service].base * priceFactor)
+  return {
+    serviceFee,
+    travel: 0,
+    total: serviceFee,
+    overtimeCap: SERVICES[service].overtimeCap ?? 0,
+  }
+}
+
+export function baht(amount: number) {
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+export function isoOffset(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export const RESPOND_MS = 20_000
+export const SEED_RESPOND_MS = 15 * 60_000
+
+export const HEALTH_SHARE_CAUTION =
+  'ลูกหลานไม่ได้มีสิทธิรับข้อมูลสุขภาพของผู้ป่วยโดยอัตโนมัติเพียงเพราะเป็นญาติ ต้องพิจารณาความยินยอม ฐานกฎหมาย และอำนาจในการดำเนินการแทนผู้ป่วยตามกรณี'
+
+export const SHARE_BASIS: { id: ShareBasis; label: string }[] = [
+  { id: 'consent', label: 'ผู้ป่วยยินยอมให้แจ้งคนนี้' },
+  { id: 'law', label: 'มีฐานกฎหมายรองรับ' },
+  { id: 'authority', label: 'มีอำนาจดำเนินการแทนตามกรณี' },
+]
+
+export const PROVIDER_TIERS: {
+  id: ProviderTier
+  name: string
+  format: string
+  author: string
+  record: string
+  review: string
+  notify: string
+  follow: string
+}[] = [
+  {
+    id: 'basic',
+    name: 'Basic',
+    format: 'Self-service / Staff-assisted',
+    author: 'เจ้าหน้าที่',
+    record: 'พิมพ์เอง',
+    review: 'เจ้าหน้าที่ตรวจ',
+    notify: 'ส่งข้อความ',
+    follow: 'ไม่มีหรือจำกัด',
+  },
+  {
+    id: 'standard',
+    name: 'Standard',
+    format: 'AI-assisted',
+    author: 'เจ้าหน้าที่ + AI',
+    record: 'กรอก Template แล้ว AI เรียบเรียง',
+    review: 'เจ้าหน้าที่ตรวจ',
+    notify: 'ส่งข้อความที่เรียบเรียงแล้ว',
+    follow: 'ติดตามสถานะข้อความ',
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    format: 'Human-assisted',
+    author: 'Care Coordinator',
+    record: 'เจ้าหน้าที่รับฟัง ประสาน และจัดทำโน้ต',
+    review: 'ประสานแพทย์เพื่อยืนยันข้อมูลตามความจำเป็น',
+    notify: 'แจ้งความคืบหน้าและประสานการสื่อสาร',
+    follow: 'ติดตามและประสานงานต่อเนื่อง',
+  },
+]
+
+export const TIER_ROWS: { key: 'format' | 'author' | 'record' | 'review' | 'notify' | 'follow'; label: string }[] = [
+  { key: 'format', label: 'รูปแบบบริการ' },
+  { key: 'author', label: 'ผู้สร้างโน้ต' },
+  { key: 'record', label: 'การบันทึก' },
+  { key: 'review', label: 'การตรวจสอบ' },
+  { key: 'notify', label: 'การแจ้งลูกหลาน' },
+  { key: 'follow', label: 'การติดตาม' },
+]
+
+export function needsFollowUp(next?: string) {
+  return Boolean(next?.includes('ติดตาม'))
+}
+
+export function noteGaps(note?: VisitNote) {
+  const gaps: string[] = []
+  if (!note?.doctorSaid.trim()) gaps.push('อาการ')
+  if (!note?.medicines.trim()) gaps.push('การรักษา')
+  if (!note?.nextVisit.trim()) gaps.push('ขั้นตอนถัดไป')
+  if (needsFollowUp(note?.nextVisit)) {
+    if (!note?.followUpDate?.trim()) gaps.push('วันนัดครั้งต่อไป')
+    if (!note?.followUpTime?.trim()) gaps.push('เวลานัดครั้งต่อไป')
+  }
+  return gaps
+}
+
+export const CARE_CLOSING =
+  'หากครอบครัวมีข้อสงสัยเกี่ยวกับแผนการรักษา สามารถติดต่อทีมดูแลเพื่อประสานแพทย์ได้ค่ะ'
+
+export function careUpdate(trip: Trip) {
+  const note = trip.visitNote
+  return {
+    greeting: `สวัสดีค่ะ ครอบครัว${trip.familyName}`,
+    elderLabel: note?.hisAllowed ? trip.elderName : 'ผู้ป่วย',
+    symptom: note?.doctorSaid.trim() || '',
+    treatment: note?.medicines.trim() || '',
+    next: note?.nextVisit.trim() || '',
+    closing: note?.caution.trim() || CARE_CLOSING,
+    visit: note?.hisAllowed ? `${trip.department} · ${trip.date} · ${trip.time} น.` : '',
+    followUp:
+      needsFollowUp(note?.nextVisit) && note?.followUpDate
+        ? `${note.followUpDate} เวลา ${note.followUpTime ?? ''} น. ที่ ${note.followUpPlace || trip.department}`.replace(/\s+/g, ' ').trim()
+        : '',
+  }
+}
+
+export function noteMessage(trip: Trip) {
+  const note = trip.visitNote
+  if (!note) return ''
+  const card = careUpdate(trip)
+  return [
+    card.greeting,
+    `วันนี้ทีมดูแลขอแจ้งความคืบหน้าเกี่ยวกับอาการของ${card.elderLabel}ค่ะ`,
+    `อาการ: ${card.symptom}`,
+    `การรักษา: ${card.treatment}`,
+    `ขั้นตอนถัดไป: ${card.next}`,
+    card.followUp ? `นัดครั้งต่อไป: ${card.followUp}` : '',
+    card.closing,
+  ].filter(Boolean).join('\n')
+}
+
+export function arrangeNote(trip: Trip) {
+  const note = trip.visitNote
+  if (!note) return ''
+  return [
+    `ข้อความที่เรียบเรียงจากเทมเพลต สำหรับครอบครัวของ${trip.elderName}`,
+    `นัดแผนก${trip.department} วันที่ ${trip.date} เวลา ${trip.time} น.`,
+    `แพทย์แจ้งว่า ${note.doctorSaid.trim()}`,
+    `เรื่องยา ${note.medicines.trim()}`,
+    `นัดถัดไป ${note.nextVisit.trim()}`,
+    `ที่บ้านควรระวัง ${note.caution.trim()}`,
+  ].join('\n')
+}
+
+export function remainText(deadline: string | undefined, now: number) {
+  if (!deadline) return ''
+  const seconds = Math.max(0, Math.ceil((Date.parse(deadline) - now) / 1000))
+  const minutes = Math.floor(seconds / 60)
+  const rest = seconds % 60
+  if (minutes <= 0) return `${rest} วินาที`
+  return `${minutes} นาที ${rest} วินาที`
+}
+
+export function hoursAgo(hours: number) {
+  return new Date(Date.now() - hours * 3_600_000).toISOString()
+}
+
+export function greeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'อรุณสวัสดิ์ค่ะ'
+  if (hour < 17) return 'สวัสดีค่ะ'
+  return 'สวัสดียามเย็นค่ะ'
+}
+
+export function thaiDate(isoDate: string) {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Intl.DateTimeFormat('th-TH', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, (month ?? 1) - 1, day))
+}
+
+export function dayLabel(isoDate: string) {
+  if (isoDate === isoOffset(0)) return 'วันนี้'
+  if (isoDate === isoOffset(1)) return 'พรุ่งนี้'
+  return new Intl.DateTimeFormat('th-TH', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(`${isoDate}T12:00:00`))
+}
+
+export function thaiTime(iso: string) {
+  return new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
+export function tripStamp(trip: Pick<Trip, 'date' | 'time'>) {
+  return `${trip.date}T${trip.time}`
+}
+
+export function repeatCompanions(trips: Trip[]) {
+  const done = trips.filter(trip => trip.owner === 'me' && trip.status === 'completed')
+  const grouped = new Map<string, Trip[]>()
+  for (const trip of done) {
+    const list = grouped.get(trip.caregiverId) ?? []
+    list.push(trip)
+    grouped.set(trip.caregiverId, list)
+  }
+  return [...grouped.entries()]
+    .map(([caregiverId, list]) => {
+      const sorted = [...list].sort((a, b) => tripStamp(b).localeCompare(tripStamp(a)))
+      return { caregiverId, count: list.length, latest: sorted[0] as Trip }
+    })
+    .sort((a, b) => b.count - a.count)
+}
+
+export function isOpenStatus(status: TripStatus) {
+  return status !== 'completed' && status !== 'cancelled'
+}
+
+export function viewStatus(status: TripStatus, service: ServiceType): TripStatus {
+  if (
+    (service === 'full' || service === 'fullday') &&
+    (status === 'en_route_pickup' || status === 'picked_up' || status === 'returning')
+  ) {
+    return 'at_hospital'
+  }
+  return status
+}
+
+export function statusFlow(service: ServiceType): TripStatus[] {
+  return ['requested', 'confirmed', 'at_hospital', 'completed']
+}
+
+export function statusLabel(status: TripStatus, service: ServiceType) {
+  switch (viewStatus(status, service)) {
+    case 'requested':
+      return 'รอผู้ดูแลยืนยัน'
+    case 'confirmed':
+      return 'นัดที่โรงพยาบาลแล้ว'
+    case 'cancelled':
+      return 'ยกเลิกแล้ว'
+    case 'at_hospital':
+      return 'อยู่ดูแลที่โรงพยาบาล'
+    case 'completed':
+      return 'จบการดูแลที่โรงพยาบาล'
+    default:
+      return 'อัปเดตสถานะ'
+  }
+}
+
+export function statusColor(status: TripStatus) {
+  if (status === 'cancelled') return 'error'
+  if (status === 'completed') return 'moss'
+  if (status === 'requested') return 'warning'
+  return 'primary'
+}
+
+export function nextStatus(status: TripStatus, service: ServiceType) {
+  const flow = statusFlow(service)
+  const index = flow.indexOf(viewStatus(status, service))
+  if (index < 0 || index >= flow.length - 1) return null
+  return flow[index + 1] ?? null
+}
+
+export function nextActionLabel(status: TripStatus, service: ServiceType) {
+  const next = nextStatus(status, service)
+  if (!next) return null
+  switch (next) {
+    case 'confirmed':
+      return 'ยืนยันรับงาน'
+    case 'at_hospital':
+      return 'เริ่มดูแลที่โรงพยาบาล'
+    case 'completed':
+      return 'จบการดูแลที่โรงพยาบาล'
+    default:
+      return null
+  }
+}
+
+export function initialFromName(name: string) {
+  const cleaned = name.replace(/^(คุณตา|คุณยาย|คุณลุง|คุณป้า|คุณน้า|คุณอา|คุณ)/, '').trim()
+  return (cleaned || name).slice(0, 1)
+}
+
+export function uid(prefix: string) {
+  return `${prefix}-${Math.random().toString(36).slice(2, 8)}`
+}

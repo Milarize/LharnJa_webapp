@@ -1,0 +1,41 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import Index from '@/pages/index.vue'
+import Home from '@/pages/home.vue'
+import Book from '@/pages/book.vue'
+import Trips from '@/pages/trips.vue'
+import Trip from '@/pages/trip.vue'
+import Plans from '@/pages/plans.vue'
+import Caregiver from '@/pages/caregiver.vue'
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior() {
+    return { top: 0 }
+  },
+  routes: [
+    { path: '/', name: 'line', component: Index },
+    { path: '/home', name: 'home', component: Home },
+    { path: '/book', name: 'book', component: Book },
+    { path: '/trips', name: 'trips', component: Trips },
+    { path: '/trips/:id', name: 'trip', component: Trip },
+    { path: '/plans', name: 'plans', component: Plans },
+    { path: '/caregiver', name: 'caregiver', component: Caregiver },
+    { path: '/:pathMatch(.*)*', redirect: '/' },
+  ],
+})
+
+const titles: Record<string, string> = {
+  line: 'หลานจ๋า · เข้าจาก LINE',
+  home: 'หน้าแรก · หลานจ๋า',
+  book: 'จองเพื่อนดูแล · หลานจ๋า',
+  trips: 'นัดหมาย · หลานจ๋า',
+  trip: 'สถานะนัด · หลานจ๋า',
+  plans: 'แพ็กเกจ · หลานจ๋า',
+  caregiver: 'งานของผู้ดูแล · หลานจ๋า',
+}
+
+router.afterEach(to => {
+  document.title = titles[String(to.name)] ?? 'หลานจ๋า'
+})
+
+export default router
