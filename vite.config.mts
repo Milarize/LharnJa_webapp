@@ -6,6 +6,7 @@ import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/LharnJa_webapp/',
   plugins: [
     Vue({
       template: { transformAssetUrls },
