@@ -113,7 +113,7 @@
           </div>
         </v-card>
 
-        <div v-if="store.role === 'caregiver' && trip.status !== 'cancelled'" class="mt-4">
+        <div v-if="store.role === 'caregiver' && viewStatus(trip.status, trip.serviceType) === 'with_doctor'" class="mt-4">
           <FamilyNote :trip="trip" />
         </div>
       </v-col>

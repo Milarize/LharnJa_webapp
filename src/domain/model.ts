@@ -223,12 +223,12 @@ export function careUpdate(trip: Trip) {
   const note = trip.visitNote
   return {
     greeting: `สวัสดีค่ะ ครอบครัว${trip.familyName}`,
-    elderLabel: note?.hisAllowed ? trip.elderName : 'ผู้ป่วย',
+    elderLabel: trip.elderName,
     symptom: note?.doctorSaid.trim() || '',
     treatment: note?.medicines.trim() || '',
     next: note?.nextVisit.trim() || '',
     closing: note?.caution.trim() || CARE_CLOSING,
-    visit: note?.hisAllowed ? `${trip.department} · ${trip.date} · ${trip.time} น.` : '',
+    visit: `${trip.department} · ${trip.date} · ${trip.time} น.`,
     followUp:
       needsFollowUp(note?.nextVisit) && note?.followUpDate
         ? `${note.followUpDate} เวลา ${note.followUpTime ?? ''} น. ที่ ${note.followUpPlace || trip.department}`.replace(/\s+/g, ' ').trim()
@@ -348,7 +348,8 @@ export function viewStatus(status: TripStatus, service: ServiceType): TripStatus
 }
 
 export function statusFlow(service: ServiceType): TripStatus[] {
-  return ['requested', 'confirmed', 'at_hospital', 'completed']
+  void service
+  return ['requested', 'confirmed', 'at_hospital', 'waiting', 'examining', 'with_doctor', 'completed']
 }
 
 export function statusLabel(status: TripStatus, service: ServiceType) {
@@ -356,11 +357,17 @@ export function statusLabel(status: TripStatus, service: ServiceType) {
     case 'requested':
       return 'รอผู้ดูแลยืนยัน'
     case 'confirmed':
-      return 'นัดที่โรงพยาบาลแล้ว'
+      return 'รับงานแล้ว'
     case 'cancelled':
       return 'ยกเลิกแล้ว'
     case 'at_hospital':
-      return 'อยู่ดูแลที่โรงพยาบาล'
+      return 'อยู่โรงพยาบาลแล้ว'
+    case 'waiting':
+      return 'อยู่ระหว่างรอคิว'
+    case 'examining':
+      return 'กำลังตรวจ'
+    case 'with_doctor':
+      return 'กำลังฟังแพทย์'
     case 'completed':
       return 'จบการดูแลที่โรงพยาบาล'
     default:
@@ -387,13 +394,40 @@ export function nextActionLabel(status: TripStatus, service: ServiceType) {
   if (!next) return null
   switch (next) {
     case 'confirmed':
-      return 'ยืนยันรับงาน'
+      return 'รับงาน'
     case 'at_hospital':
-      return 'เริ่มดูแลที่โรงพยาบาล'
+      return 'อยู่โรงพยาบาลแล้ว'
+    case 'waiting':
+      return 'อยู่ระหว่างรอคิว'
+    case 'examining':
+      return 'กำลังตรวจ'
+    case 'with_doctor':
+      return 'กำลังฟังแพทย์'
     case 'completed':
-      return 'จบการดูแลที่โรงพยาบาล'
+      return 'จบงานและส่งโน้ต'
     default:
       return null
+  }
+}
+
+export const EMERGENCY_PHONE = '02-017-8899'
+
+export function familyStatusText(status: TripStatus, nickname: string, elderName: string, place: string) {
+  switch (status) {
+    case 'confirmed':
+      return `${nickname}รับงานดูแล${elderName}ที่${place}แล้ว หากติดต่อฉุกเฉิน โทรหลานจ๋า ${EMERGENCY_PHONE}`
+    case 'at_hospital':
+      return `${nickname}อยู่โรงพยาบาลกับ${elderName}ที่${place}แล้ว`
+    case 'waiting':
+      return `${nickname}อยู่ระหว่างรอคิวกับ${elderName}ที่${place}`
+    case 'examining':
+      return `${nickname}กำลังตรวจกับ${elderName}`
+    case 'with_doctor':
+      return `${nickname}กำลังฟังแพทย์กับ${elderName}`
+    case 'completed':
+      return `${nickname}จบการดูแล${elderName}ที่${place}แล้ว`
+    default:
+      return ''
   }
 }
 

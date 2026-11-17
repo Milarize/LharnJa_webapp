@@ -1,6 +1,7 @@
 <template>
   <v-card class="pa-4" rounded="md" variant="outlined">
     <div class="text-title-medium font-weight-medium mb-1">โน้ตแจ้งลูกหลาน</div>
+    <div class="text-body-medium mb-1">{{ trip.elderName }}</div>
     <p class="text-body-small text-medium-emphasis mb-3">{{ intro }}</p>
     <v-alert class="mb-3" density="compact" icon="mdi-scale-balance" type="warning" variant="tonal">
       {{ HEALTH_SHARE_CAUTION }}
@@ -15,17 +16,6 @@
     </div>
 
     <div v-else class="d-flex flex-column ga-4">
-      <section>
-        <div class="text-label-large mb-2">ข้อมูลผู้ป่วย</div>
-        <v-btn v-if="!hisAllowed" size="small" variant="tonal" @click="allowHis">อนุญาตและดึงจาก HIS</v-btn>
-        <div v-else class="his-box">
-          <div class="text-body-medium font-weight-medium">ดึงจาก HIS แล้ว ไม่ต้องกรอกชื่อและนัดซ้ำ</div>
-          <div class="text-body-small">{{ trip.elderName }} · {{ trip.elderAge }} ปี</div>
-          <div class="text-body-small">{{ visitLine }}</div>
-          <div class="text-body-small text-medium-emphasis">{{ trip.elderNote }}</div>
-        </div>
-      </section>
-
       <section>
         <div class="text-label-large mb-2">เทมเพลต</div>
         <div class="d-flex flex-wrap ga-2">
@@ -96,11 +86,6 @@
         hide-details
         label="ประสานแพทย์เพื่อยืนยันข้อมูลตามความจำเป็น"
       />
-
-      <section>
-        <div class="text-label-large mb-2">ครอบครัวจะเห็นแบบนี้</div>
-        <CareUpdateCard v-bind="liveCard" caption="ตัวอย่างอัปเดตทันทีตามที่เลือก" />
-      </section>
 
       <section>
         <div class="text-label-large mb-2">ตรวจก่อนส่ง</div>
@@ -273,12 +258,12 @@
   })
   const liveCard = computed(() => ({
     greeting: `สวัสดีค่ะ ครอบครัว${props.trip.familyName}`,
-    elderLabel: hisAllowed.value ? props.trip.elderName : 'ผู้ป่วย',
+    elderLabel: props.trip.elderName,
     symptom: draft.doctorSaid,
     treatment: draft.medicines,
     next: draft.nextVisit,
     closing: draft.caution || CARE_CLOSING,
-    visit: hisAllowed.value ? visitLine.value : '',
+    visit: visitLine.value,
     extra: extraLine.value,
     followUp: followUpLine.value,
   }))
@@ -321,11 +306,6 @@
     custom.nextVisit = false
   }
 
-  function allowHis() {
-    hisAllowed.value = true
-    if (!draft.caution.trim()) draft.caution = CARE_CLOSING
-  }
-
   function toggle(id: string) {
     selected.value = selected.value.includes(id) ? selected.value.filter(item => item !== id) : [...selected.value, id]
   }
@@ -339,11 +319,3 @@
     store.sendVisitNote(props.trip.id, selected.value)
   }
 </script>
-
-<style scoped>
-  .his-box {
-    background: #f6f1e8;
-    border-radius: 12px;
-    padding: 10px 12px;
-  }
-</style>

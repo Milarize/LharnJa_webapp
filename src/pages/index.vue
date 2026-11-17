@@ -27,7 +27,7 @@
         <template v-if="tab === 'user'">
           <div v-if="booker && !verified" class="phone-screen">
             <ThaiIdGate
-              detail="ทำครั้งเดียวตอนเริ่มใช้ ครั้งถัดไปเปิดแอปแล้วจองได้เลย"
+              kind="family"
               :masked-id="booker.maskedId"
               :name="booker.name"
               :relation="booker.relation"
@@ -77,6 +77,7 @@
         <div v-else class="phone-screen">
           <ThaiIdGate
             v-if="!providerVerified"
+            kind="provider"
             detail="ทำครั้งเดียวตอนเริ่มรับงาน ครั้งถัดไปเปิดแอปแล้วดูงานได้เลย"
             :masked-id="PROVIDER_THAID.maskedId"
             :name="PROVIDER_THAID.name"
@@ -96,7 +97,7 @@
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
   import CareUpdateCard from '@/components/CareUpdateCard.vue'
   import { caregiverById, hospitalById } from '@/domain/data'
-  import { careUpdate, FAMILY, FAMILY_MEMBERS, PROVIDER_THAID } from '@/domain/model'
+  import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, PROVIDER_THAID } from '@/domain/model'
   import CaregiverPage from '@/pages/caregiver.vue'
   import { useCareStore } from '@/stores/care'
 
@@ -134,13 +135,9 @@
         const nickname = caregiverById(trip.caregiverId)?.nickname ?? 'ผู้ดูแล'
         const place = hospitalById(trip.hospitalId)?.short ?? 'สถานพยาบาล'
         return trip.timeline.flatMap(event => {
-          if (event.status === 'at_hospital') {
-            return [{ id: `${trip.id}-start`, at: event.at, text: `${nickname}เริ่มดูแล${trip.elderName}ที่${place}แล้ว`, card: null }]
-          }
-          if (event.status === 'completed') {
-            return [{ id: `${trip.id}-done`, at: event.at, text: `${nickname}จบการดูแล${trip.elderName}ที่${place}แล้ว`, card: null }]
-          }
-          return []
+          const text = familyStatusText(event.status, nickname, trip.elderName, place)
+          if (!text) return []
+          return [{ id: `${trip.id}-${event.status}`, at: event.at, text, card: null }]
         })
       })
     const notes = careNotes.value.map(item => ({ id: item.id, at: item.at, text: '', card: item.card }))

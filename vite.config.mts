@@ -5,7 +5,8 @@ import { defineConfig } from 'vite'
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/LharnJa_webapp/' : '/',
   plugins: [
     Vue({
       template: { transformAssetUrls },
@@ -49,4 +50,4 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
   },
-})
+}))

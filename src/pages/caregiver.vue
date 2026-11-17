@@ -1,6 +1,7 @@
 <template>
   <ThaiIdGate
     v-if="!store.isVerified(PROVIDER_THAID.id)"
+    kind="provider"
     detail="ทำครั้งเดียวตอนเริ่มรับงาน ครั้งถัดไปเปิดแอปแล้วดูงานได้เลย"
     :masked-id="PROVIDER_THAID.maskedId"
     :name="PROVIDER_THAID.name"
@@ -26,6 +27,31 @@
       </div>
       <p class="text-body-medium mt-3 mb-0" style="opacity: .92">{{ me?.bio }}</p>
     </v-card>
+
+    <h2 class="text-title-large font-weight-medium mb-3">ตารางงานของฉัน</h2>
+    <div v-if="schedule.length" class="schedule mb-8">
+      <article v-for="trip in schedule" :key="trip.id" class="schedule-item">
+        <div class="schedule-when">
+          <strong>{{ trip.time }}</strong>
+          <span>{{ dayLabel(trip.date) }}</span>
+        </div>
+        <div class="schedule-body">
+          <div class="text-title-medium font-weight-bold">{{ trip.elderName }}</div>
+          <div class="text-body-small text-medium-emphasis">{{ hospitalShort(trip.hospitalId) }} · {{ trip.department }}</div>
+          <StatusChip class="mt-2" :service="trip.serviceType" :status="trip.status" />
+          <div v-if="trip.status !== 'requested'" class="schedule-steps">
+            <span
+              v-for="step in visitSteps"
+              :key="step"
+              :class="{ 'is-done': stepIndex(trip) > visitSteps.indexOf(step), 'is-now': stepIndex(trip) === visitSteps.indexOf(step) }"
+            >
+              {{ statusLabel(step, trip.serviceType) }}
+            </span>
+          </div>
+        </div>
+      </article>
+    </div>
+    <p v-else class="text-body-medium text-medium-emphasis mb-8">ยังไม่มีงานในตาราง</p>
 
     <h2 class="text-title-large font-weight-medium mb-3">คำขอใหม่</h2>
     <div v-if="requests.length" class="d-flex flex-column ga-3 mb-8">
@@ -70,12 +96,9 @@
     </div>
     <p v-else class="text-body-medium text-medium-emphasis mb-8">ยังไม่มีงานที่รับไว้</p>
 
-    <p class="text-body-medium text-medium-emphasis mb-4">{{ planLabel }}</p>
-
-    <div v-if="noted.length" class="d-flex flex-column ga-4">
-      <FamilyNote v-for="trip in noted" :key="trip.id" :trip="trip" />
+    <div v-if="listening.length" class="d-flex flex-column ga-4">
+      <FamilyNote v-for="trip in listening" :key="trip.id" :trip="trip" />
     </div>
-    <p v-else class="text-body-medium text-medium-emphasis">รับงานแล้วจึงจดสรุปที่โรงพยาบาลได้</p>
   </div>
 </template>
 
@@ -83,9 +106,11 @@
   import { computed } from 'vue'
   import TripCard from '@/components/TripCard.vue'
   import FamilyNote from '@/components/FamilyNote.vue'
+  import StatusChip from '@/components/StatusChip.vue'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
-  import { caregiverById } from '@/domain/data'
-  import { isOpenStatus, nextActionLabel, PROVIDER_THAID, PROVIDER_TIERS, remainText, SELF_CAREGIVER_ID, tripStamp } from '@/domain/model'
+  import { caregiverById, hospitalById } from '@/domain/data'
+  import type { Trip } from '@/domain/types'
+  import { dayLabel, isOpenStatus, nextActionLabel, PROVIDER_THAID, PROVIDER_TIERS, remainText, SELF_CAREGIVER_ID, statusFlow, statusLabel, tripStamp, viewStatus } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
   const store = useCareStore()
@@ -97,13 +122,81 @@
       .filter(trip => isOpenStatus(trip.status) && trip.status !== 'requested')
       .sort((a, b) => tripStamp(a).localeCompare(tripStamp(b))),
   )
-  const planLabel = computed(() => {
-    const name = PROVIDER_TIERS.find(item => item.id === store.providerTier)?.name
-    return name ? `ครอบครัวสมัครแพ็กเกจ ${name} ไว้แล้ว` : 'ครอบครัวยังไม่ได้สมัครแพ็กเกจ'
-  })
-  const noted = computed(() =>
+  const listening = computed(() => active.value.filter(trip => viewStatus(trip.status, trip.serviceType) === 'with_doctor'))
+  const schedule = computed(() =>
     mine.value
-      .filter(trip => trip.status !== 'requested' && trip.status !== 'cancelled')
+      .filter(trip => trip.status !== 'cancelled')
       .sort((a, b) => tripStamp(a).localeCompare(tripStamp(b))),
   )
+  const visitSteps = statusFlow('full').filter(step => step !== 'requested')
+
+  function hospitalShort(id: string) {
+    return hospitalById(id)?.short ?? 'สถานพยาบาล'
+  }
+
+  function stepIndex(trip: Trip) {
+    return visitSteps.indexOf(viewStatus(trip.status, trip.serviceType))
+  }
 </script>
+
+<style scoped>
+  .schedule {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .schedule-item {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 10px;
+  }
+
+  .schedule-when {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-top: 2px;
+  }
+
+  .schedule-when strong {
+    font-size: 16px;
+  }
+
+  .schedule-when span {
+    color: #6d6256;
+    font-size: 12px;
+  }
+
+  .schedule-body {
+    border-left: 3px solid #0e6b62;
+    background: white;
+    border-radius: 0 14px 14px 0;
+    padding: 10px 12px;
+  }
+
+  .schedule-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .schedule-steps span {
+    border-radius: 999px;
+    background: #f3eee6;
+    color: #8a8178;
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .schedule-steps .is-done {
+    background: #e7f3f1;
+    color: #0e6b62;
+  }
+
+  .schedule-steps .is-now {
+    background: #0e6b62;
+    color: white;
+  }
+</style>

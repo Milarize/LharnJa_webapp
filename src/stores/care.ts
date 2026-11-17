@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import type { Elder, ProviderTier, Role, Trip, TripStatus, VisitNote } from '@/domain/types'
 import { caregiverById, createSeed, hospitalById } from '@/domain/data'
 import { rankCaregivers } from '@/domain/match'
-import { careUpdate, FAMILY, FAMILY_MEMBERS, initialFromName, nextStatus, noteGaps, noteMessage, PROVIDER_TIERS, RESPOND_MS, SEED_RESPOND_MS, statusLabel, uid } from '@/domain/model'
+import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, initialFromName, nextStatus, noteGaps, noteMessage, PROVIDER_TIERS, RESPOND_MS, SEED_RESPOND_MS, statusLabel, uid } from '@/domain/model'
 
 const STORAGE_KEY = 'care-companion-v1'
 
@@ -248,7 +248,8 @@ export const useCareStore = defineStore('care', () => {
     const trip = trips.value.find(item => item.id === id)
     if (!trip || trip.status !== 'requested') return
     const nickname = caregiverById(trip.caregiverId)?.nickname ?? 'ผู้ดูแล'
-    patchStatus(id, 'confirmed', `แจ้ง${trip.familyName}ทาง LINE แล้วว่า${nickname}รับงาน`)
+    const place = hospitalById(trip.hospitalId)?.short ?? 'สถานพยาบาล'
+    patchStatus(id, 'confirmed', familyStatusText('confirmed', nickname, trip.elderName, place))
     trip.respondBy = undefined
     ensureClock()
   }
@@ -265,12 +266,14 @@ export const useCareStore = defineStore('care', () => {
     if (!next) return
     const nickname = caregiverById(trip.caregiverId)?.nickname ?? 'ผู้ดูแล'
     const place = hospitalById(trip.hospitalId)?.short ?? 'สถานพยาบาล'
-    const message =
-      next === 'at_hospital'
-        ? `${nickname}เริ่มดูแล${trip.elderName}ที่${place}แล้ว`
-        : next === 'completed'
-          ? `${nickname}จบการดูแล${trip.elderName}ที่${place}แล้ว`
-          : `อัปเดตสถานะใน LINE แล้ว · ${statusLabel(next, trip.serviceType)}`
+    if (next === 'completed' && !trip.visitNote?.sentAt) {
+      const sent = sendVisitNote(id, trip.visitNote?.sentTo ?? [])
+      if (!sent) {
+        notify('จดโน้ตให้ครบ เลือกฐานการรับข้อมูลและผู้รับ แล้วค่อยจบงาน')
+        return
+      }
+    }
+    const message = familyStatusText(next, nickname, trip.elderName, place) || `อัปเดตสถานะใน LINE แล้ว · ${statusLabel(next, trip.serviceType)}`
     patchStatus(id, next, message)
   }
 
@@ -300,9 +303,9 @@ export const useCareStore = defineStore('care', () => {
 
   function sendVisitNote(id: string, recipientIds: string[]) {
     const trip = trips.value.find(item => item.id === id)
-    if (!trip?.visitNote || trip.visitNote.sentAt) return
+    if (!trip?.visitNote || trip.visitNote.sentAt) return Boolean(trip?.visitNote?.sentAt)
     const sentTo = recipientIds.filter(isVerified)
-    if (noteGaps(trip.visitNote).length || !sentTo.length || !trip.visitNote.shareBasis?.length) return
+    if (noteGaps(trip.visitNote).length || !sentTo.length || !trip.visitNote.shareBasis?.length) return false
     trip.visitNote = { ...trip.visitNote, sentTo, sentAt: new Date().toISOString(), tier: providerTier.value ?? 'basic' }
     const names = sentTo
       .map(recipientId => FAMILY_MEMBERS.find(person => person.id === recipientId)?.name)
@@ -314,6 +317,7 @@ export const useCareStore = defineStore('care', () => {
       { id: uid('line'), text: noteMessage(trip), at: new Date().toISOString(), card },
     ]
     notify(`ส่งสรุปนัด${trip.elderName}ทาง LINE ให้${names}แล้ว`)
+    return true
   }
 
   function subscribePlan(tier: ProviderTier) {
