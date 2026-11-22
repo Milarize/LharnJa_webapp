@@ -183,12 +183,15 @@ export function createSeed() {
   const twoWeeksAgo = isoOffset(-13)
   const plusFlow = statusFlow('full', 'p2')
   const basicFlow = statusFlow('full', 'p1')
+  const listeningFlow = plusFlow.filter(status => status !== 'completed')
   const plusTimes = ['07:40', '08:05', '08:40', '09:10', '09:35', '11:20', '12:05']
+  const listeningTimes = ['07:40', '08:05', '08:40', '09:10', '09:35', '10:20']
   const basicTimes = ['08:10', '08:25', '08:50', '09:20', '10:05', '11:40']
   const siriraj = hospitalById('siriraj')!
   const rama = hospitalById('rama')!
   const rajavithi = hospitalById('rajavithi')!
   const chula = hospitalById('chula')!
+  const today = isoOffset(0)
 
   const trips: Trip[] = [
     {
@@ -201,7 +204,7 @@ export function createSeed() {
       elderNote: 'ความดัน เบาหวาน แพ้ยาซัลฟา · เดินได้ช้า ใช้ไม้เท้า',
       hospitalId: 'siriraj',
       department: 'อายุรกรรม',
-      date: tomorrow,
+      date: today,
       time: '09:00',
       serviceType: 'full',
       packageId: 'p2',
@@ -211,12 +214,12 @@ export function createSeed() {
       placeLat: siriraj.lat,
       placeLng: siriraj.lng,
       caregiverId: 'cg-ann',
-      status: 'confirmed',
+      status: 'with_doctor',
       price: carePackage('p2').price,
-      timeline: [
-        { status: 'requested', at: hoursAgo(20) },
-        { status: 'confirmed', at: hoursAgo(3) },
-      ],
+      timeline: listeningFlow.map((status, index) => ({
+        status,
+        at: new Date(`${today}T${listeningTimes[index]}:00`).toISOString(),
+      })),
     },
     {
       id: 'trip-prasert-done',

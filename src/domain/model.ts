@@ -308,7 +308,9 @@ export const TIER_ROWS: { key: 'format' | 'author' | 'record' | 'review' | 'noti
 ]
 
 export function needsFollowUp(next?: string) {
-  return Boolean(next?.includes('ติดตาม'))
+  const text = next?.trim() ?? ''
+  if (!text) return false
+  return !text.includes('ไม่มีนัด')
 }
 
 export function noteGaps(note?: VisitNote) {

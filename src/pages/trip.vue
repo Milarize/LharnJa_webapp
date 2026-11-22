@@ -113,8 +113,17 @@
           </div>
         </v-card>
 
+        <v-alert
+          v-if="packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor' && store.role !== 'caregiver'"
+          class="mt-4"
+          icon="mdi-account-switch"
+          type="info"
+          variant="tonal"
+        >
+          นัดนี้อยู่ขั้นช่วยฟังหมอแล้ว สลับเป็นผู้ดูแลด้านบนเพื่อกรอกสรุปให้ลูกหลาน
+        </v-alert>
         <div
-          v-if="store.role === 'caregiver' && packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor'"
+          v-else-if="store.role === 'caregiver' && packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor'"
           class="mt-4"
         >
           <p class="text-body-medium text-medium-emphasis mb-3">
@@ -122,6 +131,15 @@
           </p>
           <FamilyNote :trip="trip" />
         </div>
+        <v-alert
+          v-else-if="store.role === 'caregiver' && packageHasNotes(trip.packageId) && trip.status !== 'completed' && trip.status !== 'cancelled'"
+          class="mt-4"
+          icon="mdi-note-text-outline"
+          type="info"
+          variant="tonal"
+        >
+          สรุปให้ลูกหลานจะโผล่เมื่อถึงขั้นช่วยฟังหมอ ใช้แผงสาธิตด้านล่างเดินสถานะได้
+        </v-alert>
       </v-col>
     </v-row>
 

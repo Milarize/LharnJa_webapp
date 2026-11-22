@@ -83,9 +83,24 @@ export const useCareStore = defineStore('care', () => {
   function restoreSentNotes() {
     const seed = createSeed()
     for (const seeded of seed.trips) {
-      if (!seeded.visitNote?.sentAt) continue
       const trip = trips.value.find(item => item.id === seeded.id)
-      if (trip && !trip.visitNote?.sentAt) trip.visitNote = seeded.visitNote
+      if (!trip) {
+        trips.value.push(structuredClone(seeded))
+        continue
+      }
+      if (seeded.visitNote?.sentAt && !trip.visitNote?.sentAt) trip.visitNote = seeded.visitNote
+      if (
+        seeded.id === 'trip-somsri-next' &&
+        seeded.status === 'with_doctor' &&
+        trip.status !== 'completed' &&
+        trip.status !== 'cancelled' &&
+        trip.status !== 'with_doctor'
+      ) {
+        trip.status = 'with_doctor'
+        trip.date = seeded.date
+        trip.packageId = seeded.packageId
+        trip.timeline = structuredClone(seeded.timeline)
+      }
     }
   }
 
