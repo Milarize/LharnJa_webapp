@@ -52,8 +52,8 @@ export const CARE_PACKAGES: {
     id: 'p1',
     name: 'แพ็กเกจ 1',
     price: 1090,
-    lead: 'จองล่วงหน้าได้ 3 วัน',
-    points: ['ไม่มีช่วยบันทึกหรือติดตามสถานะ', 'จองล่วงหน้าได้ 3 วัน'],
+    lead: 'เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สาม',
+    points: ['ไม่มีช่วยบันทึกหรือติดตามสถานะ', 'เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สามนับจากวันนี้'],
     recurring: false,
     profession: false,
     language: false,
@@ -62,8 +62,8 @@ export const CARE_PACKAGES: {
     id: 'p2',
     name: 'แพ็กเกจ 2',
     price: 1490,
-    lead: 'จองล่วงหน้าได้ 2 เดือน',
-    points: ['มีประกันรายวัน', 'เหมา 8 ชั่วโมง', 'มีการบันทึก', 'ช่วยฟังให้', 'จองซ้ำกับคนเดิมได้', 'จองล่วงหน้าได้ 2 เดือน'],
+    lead: 'นัดวันนี้ได้ ล่วงหน้าอย่างน้อย 2 ชั่วโมง',
+    points: ['มีประกันรายวัน', 'เหมา 8 ชั่วโมง', 'มีการบันทึก', 'ช่วยฟังให้', 'จองซ้ำกับคนเดิมได้', 'นัดวันนี้ได้ ถ้าเวลาห่างอย่างน้อย 2 ชั่วโมง', 'จองล่วงหน้าได้ 2 เดือน'],
     recurring: true,
     profession: false,
     language: false,
@@ -72,7 +72,7 @@ export const CARE_PACKAGES: {
     id: 'p3',
     name: 'แพ็กเกจ 3',
     price: 2790,
-    lead: 'จองล่วงหน้าได้ 2 เดือน',
+    lead: 'นัดวันนี้ได้ ล่วงหน้าอย่างน้อย 2 ชั่วโมง',
     points: [
       'มีประกันรายวัน',
       'เหมา 8 ชั่วโมง',
@@ -81,6 +81,7 @@ export const CARE_PACKAGES: {
       'จองซ้ำกับคนเดิมได้',
       'เลือกผู้ดูแลวิชาชีพได้',
       'เลือกภาษาได้',
+      'นัดวันนี้ได้ ถ้าเวลาห่างอย่างน้อย 2 ชั่วโมง',
       'จองล่วงหน้าได้ 2 เดือน',
     ],
     recurring: true,
@@ -96,12 +97,37 @@ export function carePackage(id: CarePackageId) {
   return CARE_PACKAGES.find(item => item.id === id) ?? CARE_PACKAGES[0]
 }
 
-export function packageMaxDate(id: CarePackageId) {
-  if (id === 'p1') return isoOffset(3)
-  const date = new Date()
-  date.setMonth(date.getMonth() + 2)
+function formatIso(date: Date) {
   const pad = (value: number) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export function packageMinDate(id: CarePackageId, now = new Date()) {
+  if (id === 'p1') {
+    const date = new Date(now)
+    date.setDate(date.getDate() + 2)
+    return formatIso(date)
+  }
+  return formatIso(new Date(now.getTime() + 2 * 60 * 60 * 1000))
+}
+
+export function packageMinTime(id: CarePackageId, dateIso: string, now = new Date()) {
+  if (id === 'p1') return ''
+  const limit = new Date(now.getTime() + 2 * 60 * 60 * 1000)
+  if (dateIso !== formatIso(limit)) return ''
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${pad(limit.getHours())}:${pad(limit.getMinutes())}`
+}
+
+export function packageMaxDate(id: CarePackageId, now = new Date()) {
+  if (id === 'p1') {
+    const date = new Date(now)
+    date.setDate(date.getDate() + 4)
+    return formatIso(date)
+  }
+  const date = new Date(now)
+  date.setMonth(date.getMonth() + 2)
+  return formatIso(date)
 }
 export const OVERTIME_CAP = 150
 
@@ -202,8 +228,7 @@ export function baht(amount: number) {
 export function isoOffset(days: number) {
   const date = new Date()
   date.setDate(date.getDate() + days)
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  return formatIso(date)
 }
 
 export const RESPOND_MS = 20_000
@@ -351,6 +376,20 @@ export function greeting() {
   if (hour < 12) return 'อรุณสวัสดิ์ค่ะ'
   if (hour < 17) return 'สวัสดีค่ะ'
   return 'สวัสดียามเย็นค่ะ'
+}
+
+export function appointmentDate(value: string | Date) {
+  const date = typeof value === 'string'
+    ? (() => {
+        const [year, month, day] = value.split('-').map(Number)
+        return new Date(year, (month || 1) - 1, day || 1)
+      })()
+    : value
+  return new Intl.DateTimeFormat('th-TH', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
 }
 
 export function thaiDate(isoDate: string) {

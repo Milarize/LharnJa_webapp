@@ -63,8 +63,8 @@
             rounded="md"
             tabindex="0"
             :variant="packageId === item.id ? 'tonal' : 'outlined'"
-            @click="packageId = item.id"
-            @keydown.enter="packageId = item.id"
+            @click="selectPackage(item.id)"
+            @keydown.enter="selectPackage(item.id)"
           >
             <div class="d-flex justify-space-between align-start ga-3">
               <div>
@@ -121,7 +121,7 @@
           hide-details
           label="ค้นหาชื่อสถานพยาบาลเอง"
           :loading="searching"
-          placeholder="เช่น เปาโลเกษตร"
+          placeholder="ค้นหาโรงพยาบาลใกล้คุณ"
           prepend-inner-icon="mdi-magnify"
         />
         <PlaceMap
@@ -158,26 +158,34 @@
         </div>
       </div>
 
-      <v-text-field v-model="date" hide-details label="วันที่นัด" :max="latest" :min="earliest" type="date" />
+      <v-menu v-model="dateMenu" :close-on-content-click="false" location="bottom start">
+        <template #activator="{ props: menu }">
+          <v-text-field
+            v-bind="menu"
+            hide-details
+            label="วันที่นัด"
+            prepend-inner-icon="mdi-calendar"
+            readonly
+            :model-value="appointmentDate(date)"
+          />
+        </template>
+        <v-date-picker
+          color="primary"
+          header-date-format="appointment"
+          :max="latest"
+          :min="earliest"
+          :model-value="date"
+          @update:model-value="chooseDate"
+        />
+      </v-menu>
+      <p class="text-body-small text-medium-emphasis mt-2 mb-0">{{ dateHint }}</p>
 
       <div>
         <div class="text-label-large mb-2">เวลานัด</div>
-        <div class="d-flex flex-wrap ga-2">
-          <v-chip
-            v-for="slot in TIME_SLOTS"
-            :key="slot"
-            :color="time === slot ? 'primary' : undefined"
-            :variant="time === slot ? 'flat' : 'outlined'"
-            @click="time = slot"
-          >
-            {{ slot }} น.
-          </v-chip>
-        </div>
+        <TimeWheel v-model="time" :min-time="earliestTime || undefined" />
+        <p class="text-body-small text-medium-emphasis mt-2 mb-0">{{ timeHint }}</p>
       </div>
 
-      <p class="text-body-small text-medium-emphasis mb-0">
-        {{ selectedPackage.lead }} ผู้ดูแลไปพบที่โรงพยาบาลที่เลือก แล้วอยู่ดูแลระหว่างพบแพทย์
-      </p>
     </div>
 
     <div v-else-if="step === 4">
@@ -356,6 +364,7 @@
   import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import PlaceMap from '@/components/PlaceMap.vue'
+  import TimeWheel from '@/components/TimeWheel.vue'
   import type { CarePackageId, Hospital, NeedId } from '@/domain/types'
   import { caregiverById, hospitals } from '@/domain/data'
   import { searchPlaces } from '@/domain/placeSearch'
@@ -363,6 +372,7 @@
   import type { RankedCaregiver } from '@/domain/match'
   import { rankCaregivers } from '@/domain/match'
   import {
+    appointmentDate,
     baht,
     CARE_PACKAGES,
     carePackage,
@@ -374,7 +384,8 @@
     PACKAGE_LANGUAGES,
     PACKAGE_PROFESSIONS,
     packageMaxDate,
-    TIME_SLOTS,
+    packageMinDate,
+    packageMinTime,
   } from '@/domain/model'
   import { FAMILY } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
@@ -393,9 +404,23 @@
   const language = ref(PACKAGE_LANGUAGES[0])
   const hospitalId = ref('')
   const department = ref('อายุรกรรม')
-  const earliest = isoOffset(1)
+  const date = ref(packageMinDate('p1'))
+  const dateMenu = ref(false)
+  const time = ref('09:00')
+  const earliest = computed(() => packageMinDate(packageId.value))
   const selectedPackage = computed(() => carePackage(packageId.value))
   const latest = computed(() => packageMaxDate(packageId.value))
+  const earliestTime = computed(() => packageMinTime(packageId.value, date.value))
+  const dateHint = computed(() =>
+    packageId.value === 'p1'
+      ? 'แพ็กเกจ 1 เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สามนับจากวันนี้'
+      : 'นัดวันนี้ได้ถ้าเวลาห่างอย่างน้อย 2 ชั่วโมง และเลือกวันล่วงหน้าได้ 2 เดือน',
+  )
+  const timeHint = computed(() =>
+    earliestTime.value
+      ? `วันนี้เลือกได้ตั้งแต่ ${earliestTime.value} น. เลื่อนวงล้อได้เฉพาะเวลาที่ยังทัน`
+      : `เลื่อนชั่วโมงและนาทีขึ้นลง แถบสีเขียวคือเวลาที่เลือก ${time.value} น.`,
+  )
   const packageDetail = computed(() => {
     const extra = [
       selectedPackage.value.profession && profession.value !== 'ไม่ระบุ' ? `วิชาชีพ ${profession.value}` : '',
@@ -403,8 +428,6 @@
     ].filter(Boolean)
     return [selectedPackage.value.lead, ...extra].join(' · ')
   })
-  const date = ref(isoOffset(1))
-  const time = ref('09:00')
   const hospitalQuery = ref('')
   const suggestions = ref<Hospital[]>([])
   const found = ref<Hospital[]>([])
@@ -695,9 +718,25 @@
     draft.mobility = ''
   }
 
-  watch(packageId, () => {
-    if (date.value < earliest) date.value = earliest
-    if (date.value > latest.value) date.value = latest.value
+  function selectPackage(id: CarePackageId) {
+    packageId.value = id
+    date.value = id === 'p1' ? packageMinDate('p1') : isoOffset(0)
+  }
+
+  function chooseDate(value: unknown) {
+    if (value instanceof Date) {
+      const pad = (part: number) => String(part).padStart(2, '0')
+      date.value = `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+    } else if (typeof value === 'string' && value) {
+      date.value = value.slice(0, 10)
+    }
+    dateMenu.value = false
+  }
+
+  watch([packageId, date], () => {
+    if (date.value < earliest.value) date.value = earliest.value
+    else if (date.value > latest.value) date.value = latest.value
+    else if (earliestTime.value && time.value < earliestTime.value) time.value = earliestTime.value
   })
 
   function back() {
@@ -716,10 +755,14 @@
         error.value = 'เลือกสถานพยาบาลหรือปักหมุด แล้วเลือกวันที่และเวลา'
         return
       }
-      if (date.value < earliest || date.value > latest.value) {
+      if (date.value < earliest.value || date.value > latest.value) {
         error.value = selectedPackage.value.id === 'p1'
-          ? 'แพ็กเกจ 1 จองล่วงหน้าได้ไม่เกิน 3 วัน'
+          ? 'แพ็กเกจ 1 เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สามนับจากวันนี้'
           : 'แพ็กเกจนี้จองล่วงหน้าได้ไม่เกิน 2 เดือน'
+        return
+      }
+      if (earliestTime.value && time.value < earliestTime.value) {
+        error.value = 'เวลานัดต้องห่างจากตอนนี้อย่างน้อย 2 ชั่วโมง'
         return
       }
     }
