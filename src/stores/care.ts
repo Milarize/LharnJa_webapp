@@ -33,6 +33,9 @@ export interface NewTripInput {
   date: string
   time: string
   serviceType: Trip['serviceType']
+  packageId?: Trip['packageId']
+  profession?: string
+  language?: string
   needs: Trip['needs']
   note: string
   pickup: string

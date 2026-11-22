@@ -26,7 +26,14 @@ jobs:
       - name: Install
         run: npm ci
       - name: Build
-        run: npm run build-only
+        env:
+          VITE_NOSTRA_API_KEY: ${{ secrets.VITE_NOSTRA_API_KEY }}
+        run: |
+          if [ -z "$VITE_NOSTRA_API_KEY" ]; then
+            echo "ตั้ง secret ชื่อ VITE_NOSTRA_API_KEY ก่อน build"
+            exit 1
+          fi
+          npm run build-only
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

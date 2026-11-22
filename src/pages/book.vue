@@ -51,38 +51,83 @@
     </div>
 
     <div v-else-if="step === 2">
-      <p class="text-body-medium text-medium-emphasis mb-4">วันนี้ให้หลานจ๋าช่วยอะไร</p>
+      <p class="text-body-medium text-medium-emphasis mb-4">
+        เติมแพ็กเกจต่อการจองครั้งนี้ ไม่มีการสมัครรายเดือน ผู้ดูแลไปพบที่โรงพยาบาลแล้วอยู่ดูแลระหว่างพบแพทย์
+      </p>
       <v-row>
-        <v-col v-for="key in BOOKABLE_SERVICES" :key="key" cols="12">
+        <v-col v-for="item in CARE_PACKAGES" :key="item.id" cols="12">
           <v-card
             class="pa-4"
-            :color="service === key ? 'primary' : undefined"
+            :color="packageId === item.id ? 'primary' : undefined"
             role="button"
             rounded="md"
             tabindex="0"
-            :variant="service === key ? 'tonal' : 'outlined'"
-            @click="service = key"
-            @keydown.enter="service = key"
+            :variant="packageId === item.id ? 'tonal' : 'outlined'"
+            @click="packageId = item.id"
+            @keydown.enter="packageId = item.id"
           >
-            <div class="d-flex align-center ga-3">
-              <v-icon :icon="SERVICES[key].icon" size="32" />
+            <div class="d-flex justify-space-between align-start ga-3">
               <div>
-                <div class="text-title-medium font-weight-medium">{{ SERVICES[key].short }}</div>
-                <div class="text-body-small text-medium-emphasis">{{ SERVICES[key].detail }}</div>
-                <div class="text-body-small mt-1">{{ SERVICES[key].hours }}</div>
+                <div class="text-title-medium font-weight-medium">{{ item.name }}</div>
+                <div class="text-body-small text-medium-emphasis">{{ item.lead }}</div>
               </div>
+              <div class="text-title-medium font-weight-bold">{{ baht(item.price) }}</div>
             </div>
+            <ul class="package-points mt-3 mb-0">
+              <li v-for="point in item.points" :key="point">{{ point }}</li>
+            </ul>
           </v-card>
         </v-col>
       </v-row>
+      <div v-if="selectedPackage.profession" class="d-flex flex-column ga-4 mt-5">
+        <div>
+          <div class="text-label-large mb-2">วิชาชีพของผู้ดูแล</div>
+          <div class="d-flex flex-wrap ga-2">
+            <v-chip
+              v-for="item in PACKAGE_PROFESSIONS"
+              :key="item"
+              :color="profession === item ? 'primary' : undefined"
+              :variant="profession === item ? 'flat' : 'outlined'"
+              @click="profession = item"
+            >
+              {{ item }}
+            </v-chip>
+          </div>
+        </div>
+        <div>
+          <div class="text-label-large mb-2">ภาษา</div>
+          <div class="d-flex flex-wrap ga-2">
+            <v-chip
+              v-for="item in PACKAGE_LANGUAGES"
+              :key="item"
+              :color="language === item ? 'primary' : undefined"
+              :variant="language === item ? 'flat' : 'outlined'"
+              @click="language = item"
+            >
+              {{ item }}
+            </v-chip>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-else-if="step === 3" class="d-flex flex-column ga-5">
       <div>
-        <div class="text-label-large mb-1">โรงพยาบาล คลินิก หรือศูนย์กายภาพ</div>
+        <div class="text-label-large mb-1">โรงพยาบาลใกล้บ้าน</div>
         <p class="text-body-small text-medium-emphasis mb-3">{{ locationHint }}</p>
-        <PlaceMap :hospitals="hospitals" :selected-id="hospitalId" :user="userPoint" @select="chooseHospital" />
-        <div class="d-flex flex-column ga-2 mt-3">
+        <v-text-field
+          v-model="hospitalQuery"
+          clearable
+          hide-details
+          label="ค้นหาโรงพยาบาล คลินิก หรือศูนย์กายภาพ"
+          placeholder="เช่น ศิริราช หรือ ลาดพร้าว"
+          prepend-inner-icon="mdi-magnify"
+        />
+        <PlaceMap class="mt-3" :hospitals="nearestHospitals" :selected-id="hospitalId" :user="userPoint" @select="chooseHospital" />
+        <p v-if="!nearestHospitals.length" class="text-body-medium text-medium-emphasis mt-3 mb-0">
+          ไม่พบสถานพยาบาลที่ตรงกับคำค้น
+        </p>
+        <div v-else class="d-flex flex-column ga-2 mt-3">
           <button
             v-for="hospital in nearestHospitals"
             :key="hospital.id"
@@ -100,7 +145,7 @@
         </div>
       </div>
 
-      <v-text-field v-model="date" hide-details label="วันที่นัด" :min="earliest" type="date" />
+      <v-text-field v-model="date" hide-details label="วันที่นัด" :max="latest" :min="earliest" type="date" />
 
       <div>
         <div class="text-label-large mb-2">เวลานัด</div>
@@ -117,7 +162,9 @@
         </div>
       </div>
 
-      <p class="text-body-small text-medium-emphasis mb-0">ผู้ดูแลไปเจอที่นั่น และอยู่ดูแลระหว่างพบแพทย์ ไม่ได้รับส่ง</p>
+      <p class="text-body-small text-medium-emphasis mb-0">
+        {{ selectedPackage.lead }} ผู้ดูแลไปพบที่โรงพยาบาลที่เลือก แล้วอยู่ดูแลระหว่างพบแพทย์
+      </p>
     </div>
 
     <div v-else-if="step === 4">
@@ -201,7 +248,7 @@
             </v-avatar>
             <div class="flex-grow-1">
               <v-chip
-                v-if="item.caregiver.id === rebookSource?.caregiverId"
+                v-if="selectedPackage.recurring && item.caregiver.id === rebookSource?.caregiverId"
                 class="mb-1"
                 color="primary"
                 size="small"
@@ -225,14 +272,8 @@
               </div>
               <div class="d-flex justify-space-between align-center">
                 <div>
-                  <div class="text-title-medium font-weight-bold">{{ baht(item.quote.total) }}</div>
-                  <div class="text-body-small text-medium-emphasis">
-                    {{
-                      item.quote.total > SERVICES[service].base
-                        ? `เลือกคนนี้เอง เพิ่ม ${baht(item.quote.total - SERVICES[service].base)}`
-                        : 'ราคาทั่วไปของการจองครั้งนี้'
-                    }}
-                  </div>
+                  <div class="text-title-medium font-weight-bold">{{ baht(selectedPackage.price) }}</div>
+                  <div class="text-body-small text-medium-emphasis">ราคาแพ็กเกจนี้ เติมต่อการจอง</div>
                 </div>
                 <v-chip color="primary" variant="flat">
                   {{ caregiverId === item.caregiver.id ? 'เลือกแล้ว' : 'เลือก' }}
@@ -257,18 +298,18 @@
               </v-avatar>
             </template>
           </v-list-item>
-          <v-list-item prepend-icon="mdi-clock-outline" :title="SERVICES[service].label" :subtitle="SERVICES[service].detail" />
+          <v-list-item prepend-icon="mdi-package-variant" :title="`${selectedPackage.name} · ${baht(selectedPackage.price)}`" :subtitle="packageDetail" />
         </v-list>
         <div v-if="needs.length" class="d-flex flex-wrap ga-2 mt-2">
           <v-chip v-for="need in needs" :key="need" size="small" variant="tonal">{{ needLabel(need) }}</v-chip>
         </div>
         <p v-else class="text-body-medium text-medium-emphasis mt-2 mb-0">ไม่ได้ระบุความต้องการพิเศษ</p>
         <v-divider class="my-4" />
-        <div v-if="selectedRank" class="d-flex justify-space-between text-title-medium font-weight-bold">
-          <span>ค่าผู้ดูแลที่โรงพยาบาล</span><span>{{ baht(selectedRank.quote.total) }}</span>
+        <div class="d-flex justify-space-between text-title-medium font-weight-bold">
+          <span>ค่าแพ็กเกจต่อการจอง</span><span>{{ baht(selectedPackage.price) }}</span>
         </div>
         <p class="text-body-small text-medium-emphasis mt-3 mb-0">
-          ครอบครัวจ่ายครั้งนี้ครั้งเดียว ผู้ดูแลไม่ถือเงินและไม่ติดต่อผู้สูงอายุส่วนตัว ถ้าผู้ดูแลไม่กดรับ โปรแกรมส่งต่อให้คนถัดไป และยังไม่คิดเงิน
+          เติมแพ็กเกจครั้งนี้ครั้งเดียว ไม่มีการสมัครรายเดือน ผู้ดูแลไม่ถือเงินและไม่ติดต่อผู้สูงอายุส่วนตัว ถ้าผู้ดูแลไม่กดรับ โปรแกรมส่งต่อให้คนถัดไป และยังไม่คิดเงิน
         </p>
       </v-card>
     </div>
@@ -302,20 +343,23 @@
   import { computed, onMounted, reactive, ref, watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import PlaceMap from '@/components/PlaceMap.vue'
-  import type { NeedId, ServiceType } from '@/domain/types'
+  import type { CarePackageId, NeedId } from '@/domain/types'
   import { caregiverById, hospitals } from '@/domain/data'
   import { distanceKm, formatKm, inServiceArea, type LatLng } from '@/domain/geo'
   import type { RankedCaregiver } from '@/domain/match'
   import { rankCaregivers } from '@/domain/match'
   import {
     baht,
-    BOOKABLE_SERVICES,
+    CARE_PACKAGES,
+    carePackage,
     dayLabel,
     DEPARTMENTS,
     isoOffset,
     needLabel,
     NEED_OPTIONS,
-    SERVICES,
+    PACKAGE_LANGUAGES,
+    PACKAGE_PROFESSIONS,
+    packageMaxDate,
     TIME_SLOTS,
   } from '@/domain/model'
   import { FAMILY } from '@/domain/model'
@@ -330,13 +374,24 @@
   const ranking = ref(false)
   const adding = ref(false)
   const elderId = ref(store.elders[0]?.id ?? '')
-  const service = ref<ServiceType>('full')
+  const packageId = ref<CarePackageId>('p1')
+  const profession = ref(PACKAGE_PROFESSIONS[0])
+  const language = ref(PACKAGE_LANGUAGES[0])
   const hospitalId = ref('')
   const department = ref('อายุรกรรม')
   const earliest = isoOffset(1)
+  const selectedPackage = computed(() => carePackage(packageId.value))
+  const latest = computed(() => packageMaxDate(packageId.value))
+  const packageDetail = computed(() => {
+    const extra = [
+      selectedPackage.value.profession && profession.value !== 'ไม่ระบุ' ? `วิชาชีพ ${profession.value}` : '',
+      selectedPackage.value.language && language.value !== 'ไทย' ? `ภาษา${language.value}` : '',
+    ].filter(Boolean)
+    return [selectedPackage.value.lead, ...extra].join(' · ')
+  })
   const date = ref(isoOffset(1))
   const time = ref('09:00')
-  const pickup = ref('')
+  const hospitalQuery = ref('')
   const userPoint = ref<LatLng>({ lat: FAMILY.lat, lng: FAMILY.lng })
   const usingDevice = ref(false)
   const locating = ref(false)
@@ -347,7 +402,7 @@
   const caregiverId = ref('')
   let rankTimer = 0
 
-  const titles = ['ผู้สูงอายุ', 'ช่วยอะไร', 'ไปเมื่อไร', 'ความต้องการ', 'เพื่อนดูแล', 'ยืนยันคำขอ']
+  const titles = ['ผู้สูงอายุ', 'แพ็กเกจ', 'ไปเมื่อไร', 'ความต้องการ', 'เพื่อนดูแล', 'ยืนยันคำขอ']
   const careNeeds = NEED_OPTIONS.filter(item => item.group === 'care')
   const preferNeeds = NEED_OPTIONS.filter(item => item.group === 'prefer')
   const draft = reactive({ name: '', relation: '', age: 75, conditions: '', mobility: '' })
@@ -357,26 +412,27 @@
       hospitalId: hospitalId.value,
       needs: needs.value,
       elderId: elderId.value,
-      service: service.value,
+      service: 'full',
     }),
   )
   const selectedElder = computed(() => store.elders.find(item => item.id === elderId.value))
   const selectedHospital = computed(() => hospitals.find(item => item.id === hospitalId.value))
-  const nearestHospitals = computed(() =>
-    hospitals
+  const nearestHospitals = computed(() => {
+    const query = hospitalQuery.value.trim().toLowerCase()
+    return hospitals
       .map(hospital => ({ ...hospital, km: distanceKm(userPoint.value, hospital) }))
-      .sort((a, b) => a.km - b.km),
-  )
-  const pickupText = computed(() => {
-    if (pickup.value.trim()) return pickup.value.trim()
-    if (usingDevice.value) return 'ตำแหน่งปัจจุบันของคุณ'
-    return FAMILY.pickup
+      .filter(hospital => {
+        if (!query) return true
+        return `${hospital.name} ${hospital.short} ${hospital.area}`.toLowerCase().includes(query)
+      })
+      .sort((a, b) => a.km - b.km)
   })
   const locationHint = computed(() => {
-    if (locating.value) return 'กำลังอ่านตำแหน่งจากเครื่อง เพื่อเรียงโรงพยาบาลที่ใกล้ที่สุด'
-    if (outsideArea.value) return 'ตำแหน่งนี้อยู่นอกพื้นที่ ใช้จุดที่บันทึกไว้เพื่อเรียงโรงพยาบาล'
-    if (usingDevice.value) return 'เรียงโรงพยาบาลจากตำแหน่งของคุณ ผู้ดูแลไปเจอที่โรงพยาบาล'
-    return 'ยังไม่ได้เปิดตำแหน่ง เรียงโรงพยาบาลจากจุดที่บันทึกไว้'
+    if (hospitalQuery.value.trim()) return 'ผลการค้นหา ระยะทางวัดจากบ้าน'
+    if (locating.value) return 'กำลังอ่านตำแหน่งจากเครื่อง เพื่อเรียงโรงพยาบาลที่ใกล้บ้าน'
+    if (outsideArea.value) return 'ตำแหน่งนี้อยู่นอกพื้นที่ ใช้จุดที่บันทึกไว้เพื่อเรียงโรงพยาบาลใกล้บ้าน'
+    if (usingDevice.value) return 'เรียงโรงพยาบาลที่ใกล้บ้านจากตำแหน่งของคุณ พิมพ์ชื่อเพื่อค้นหา'
+    return 'เรียงโรงพยาบาลที่ใกล้บ้านจากจุดที่บันทึกไว้ พิมพ์ชื่อเพื่อค้นหา'
   })
   const selectedRank = computed(() => ranked.value.find(item => item.caregiver.id === caregiverId.value))
   const selectedCare = computed(() => selectedRank.value?.caregiver)
@@ -390,7 +446,7 @@
   )
   const shownRanked = computed(() => {
     const available = ranked.value.filter(item => !item.blocked)
-    const sameId = rebookSource.value?.caregiverId
+    const sameId = selectedPackage.value.recurring ? rebookSource.value?.caregiverId : ''
     if (!sameId) return available
     return [...available].sort((a, b) => {
       if (a.caregiver.id === sameId) return -1
@@ -406,11 +462,12 @@
       const source = store.trips.find(trip => trip.id === id && trip.owner === 'me')
       if (!source) return
       elderId.value = source.elderId
-      service.value = source.serviceType === 'fullday' ? 'fullday' : 'full'
+      packageId.value = source.packageId && carePackage(source.packageId).recurring ? source.packageId : 'p2'
+      profession.value = source.profession || PACKAGE_PROFESSIONS[0]
+      language.value = source.language || PACKAGE_LANGUAGES[0]
       hospitalId.value = source.hospitalId
       department.value = source.department
       needs.value = [...source.needs]
-      pickup.value = source.pickup
       hospitalTouched.value = true
       note.value = source.note
       caregiverId.value = source.caregiverId
@@ -423,7 +480,7 @@
 
   watch(step, (value, previous) => {
     if (value === 5 && previous === 4) {
-      const keep = rebookSource.value?.caregiverId ?? ''
+      const keep = selectedPackage.value.recurring ? rebookSource.value?.caregiverId ?? '' : ''
       caregiverId.value = keep
       ranking.value = true
       window.clearTimeout(rankTimer)
@@ -514,6 +571,11 @@
     draft.mobility = ''
   }
 
+  watch(packageId, () => {
+    if (date.value < earliest) date.value = earliest
+    if (date.value > latest.value) date.value = latest.value
+  })
+
   function back() {
     error.value = ''
     step.value -= 1
@@ -530,8 +592,10 @@
         error.value = 'เลือกสถานพยาบาล วันที่ และเวลา'
         return
       }
-      if (date.value < earliest) {
-        error.value = 'จองล่วงหน้าอย่างน้อย 1 วัน'
+      if (date.value < earliest || date.value > latest.value) {
+        error.value = selectedPackage.value.id === 'p1'
+          ? 'แพ็กเกจ 1 จองล่วงหน้าได้ไม่เกิน 3 วัน'
+          : 'แพ็กเกจนี้จองล่วงหน้าได้ไม่เกิน 2 เดือน'
         return
       }
     }
@@ -563,14 +627,19 @@
       department: department.value,
       date: date.value,
       time: time.value,
-      serviceType: service.value,
+      serviceType: 'full',
+      packageId: selectedPackage.value.id,
+      profession: selectedPackage.value.profession && profession.value !== 'ไม่ระบุ' ? profession.value : undefined,
+      language: selectedPackage.value.language && language.value !== 'ไทย' ? language.value : undefined,
       needs: [...needs.value],
       note: note.value.trim(),
-      pickup: pickupText.value,
+      pickup: selectedHospital.value?.name ?? '',
       caregiverId: rankedCare.caregiver.id,
-      price: rankedCare.quote.total,
+      price: selectedPackage.value.price,
       repeatOf:
-        rebookSource.value && rankedCare.caregiver.id === rebookSource.value.caregiverId
+        selectedPackage.value.recurring &&
+        rebookSource.value &&
+        rankedCare.caregiver.id === rebookSource.value.caregiverId
           ? rebookSource.value.id
           : undefined,
     })
@@ -579,6 +648,10 @@
 </script>
 
 <style scoped>
+  .package-points {
+    padding-left: 1.2rem;
+  }
+
   .hospital-row {
     display: flex;
     align-items: center;

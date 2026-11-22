@@ -1,4 +1,4 @@
-import type { NeedId, ProviderTier, Quote, ServiceType, ShareBasis, Trip, TripStatus, VisitNote, FamilyMember } from '@/domain/types'
+import type { CarePackageId, NeedId, ProviderTier, Quote, ServiceType, ShareBasis, Trip, TripStatus, VisitNote, FamilyMember } from '@/domain/types'
 
 export const FAMILY = {
   displayName: 'คุณนภา วงศ์สุข',
@@ -37,6 +37,72 @@ export const DEPARTMENTS = [
 export const TIME_SLOTS = ['07:30', '08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00']
 
 export const BOOKABLE_SERVICES: ServiceType[] = ['full', 'fullday']
+
+export const CARE_PACKAGES: {
+  id: CarePackageId
+  name: string
+  price: number
+  lead: string
+  points: string[]
+  recurring: boolean
+  profession: boolean
+  language: boolean
+}[] = [
+  {
+    id: 'p1',
+    name: 'แพ็กเกจ 1',
+    price: 1090,
+    lead: 'จองล่วงหน้าได้ 3 วัน',
+    points: ['ไม่มีช่วยบันทึกหรือติดตามสถานะ', 'จองล่วงหน้าได้ 3 วัน'],
+    recurring: false,
+    profession: false,
+    language: false,
+  },
+  {
+    id: 'p2',
+    name: 'แพ็กเกจ 2',
+    price: 1490,
+    lead: 'จองล่วงหน้าได้ 2 เดือน',
+    points: ['มีประกันรายวัน', 'เหมา 8 ชั่วโมง', 'มีการบันทึก', 'ช่วยฟังให้', 'จองซ้ำกับคนเดิมได้', 'จองล่วงหน้าได้ 2 เดือน'],
+    recurring: true,
+    profession: false,
+    language: false,
+  },
+  {
+    id: 'p3',
+    name: 'แพ็กเกจ 3',
+    price: 2790,
+    lead: 'จองล่วงหน้าได้ 2 เดือน',
+    points: [
+      'มีประกันรายวัน',
+      'เหมา 8 ชั่วโมง',
+      'มีการบันทึก',
+      'ช่วยฟังให้',
+      'จองซ้ำกับคนเดิมได้',
+      'เลือกผู้ดูแลวิชาชีพได้',
+      'เลือกภาษาได้',
+      'จองล่วงหน้าได้ 2 เดือน',
+    ],
+    recurring: true,
+    profession: true,
+    language: true,
+  },
+]
+
+export const PACKAGE_PROFESSIONS = ['ไม่ระบุ', 'พยาบาล', 'นักกายภาพบำบัด', 'ผู้ช่วยพยาบาล']
+export const PACKAGE_LANGUAGES = ['ไทย', 'อังกฤษ', 'จีน', 'ญี่ปุ่น']
+
+export function carePackage(id: CarePackageId) {
+  return CARE_PACKAGES.find(item => item.id === id) ?? CARE_PACKAGES[0]
+}
+
+export function packageMaxDate(id: CarePackageId) {
+  if (id === 'p1') return isoOffset(3)
+  const date = new Date()
+  date.setMonth(date.getMonth() + 2)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
 export const OVERTIME_CAP = 150
 
 export const SERVICES: Record<
@@ -87,9 +153,12 @@ export const NEED_OPTIONS: { id: NeedId; label: string; icon: string; group: 'ca
   { id: 'hearing', label: 'ได้ยินไม่ชัด', icon: 'mdi-ear-hearing', group: 'care' },
   { id: 'female', label: 'ขอผู้ดูแลเพศหญิง', icon: 'mdi-human-female', group: 'prefer' },
   { id: 'male', label: 'ขอผู้ดูแลเพศชาย', icon: 'mdi-human-male', group: 'prefer' },
-  { id: 'chinese', label: 'ต้องการคนพูดภาษาจีน', icon: 'mdi-translate', group: 'prefer' },
-  { id: 'updates', label: 'รายงานครอบครัวระหว่างรอ', icon: 'mdi-message-text-outline', group: 'prefer' },
 ]
+
+const RETIRED_NEED_LABEL: Partial<Record<NeedId, string>> = {
+  chinese: 'ต้องการคนพูดภาษาจีน',
+  updates: 'รายงานครอบครัวระหว่างรอ',
+}
 
 const SHORT_NEED: Record<NeedId, string> = {
   cane: 'การเดินช้า',
@@ -105,7 +174,7 @@ const SHORT_NEED: Record<NeedId, string> = {
 }
 
 export function needLabel(id: NeedId) {
-  return NEED_OPTIONS.find(item => item.id === id)?.label ?? id
+  return NEED_OPTIONS.find(item => item.id === id)?.label ?? RETIRED_NEED_LABEL[id] ?? id
 }
 
 export function shortNeed(id: NeedId) {

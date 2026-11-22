@@ -6,6 +6,8 @@ export type ShareBasis = 'consent' | 'law' | 'authority'
 
 export type ServiceType = 'full' | 'dropoff' | 'pickup' | 'fullday'
 
+export type CarePackageId = 'p1' | 'p2' | 'p3'
+
 export type TripStatus =
   | 'requested'
   | 'confirmed'
@@ -103,6 +105,9 @@ export interface Trip {
   date: string
   time: string
   serviceType: ServiceType
+  packageId?: CarePackageId
+  profession?: string
+  language?: string
   needs: NeedId[]
   note: string
   pickup: string

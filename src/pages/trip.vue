@@ -92,7 +92,7 @@
             <v-btn prepend-icon="mdi-phone" variant="outlined" @click="fake('โทร')">โทร</v-btn>
             <v-btn prepend-icon="mdi-chat" variant="outlined" @click="fake('ส่งข้อความ')">ข้อความ</v-btn>
             <v-btn
-              v-if="trip.owner === 'me' && trip.status === 'completed'"
+              v-if="trip.owner === 'me' && trip.status === 'completed' && trip.packageId !== 'p1'"
               color="primary"
               prepend-icon="mdi-calendar-sync"
               :to="{ name: 'book', query: { rebook: trip.id } }"
@@ -106,6 +106,7 @@
           <div class="text-title-medium font-weight-medium mb-2">สิ่งที่ผู้ดูแลควรรู้</div>
           <p class="text-body-medium mb-2">{{ trip.elderNote }}</p>
           <p v-if="trip.note" class="text-body-medium mb-3">{{ trip.note }}</p>
+          <div v-if="trip.packageId" class="text-body-medium">{{ packageName(trip.packageId) }}</div>
           <div class="text-body-medium">{{ SERVICES[trip.serviceType].label }}</div>
           <div class="text-body-small text-medium-emphasis mb-3">{{ hospital?.name }} · {{ trip.department }}</div>
           <div class="d-flex flex-wrap ga-2">
@@ -166,9 +167,10 @@
   import StatusChip from '@/components/StatusChip.vue'
   import FamilyNote from '@/components/FamilyNote.vue'
   import { caregiverById, hospitalById } from '@/domain/data'
-  import type { TripStatus } from '@/domain/types'
+  import type { CarePackageId, TripStatus } from '@/domain/types'
   import {
     baht,
+    carePackage,
     dayLabel,
     needLabel,
     nextActionLabel,
@@ -183,6 +185,11 @@
   import { useCareStore } from '@/stores/care'
 
   const store = useCareStore()
+
+  function packageName(id: CarePackageId) {
+    const item = carePackage(id)
+    return `${item.name} · ${baht(item.price)}`
+  }
   const route = useRoute()
   const trip = computed(() => store.trips.find(item => item.id === String(route.params.id)))
   const hospital = computed(() => (trip.value ? hospitalById(trip.value.hospitalId) : undefined))
