@@ -37,7 +37,7 @@
         </div>
         <div class="schedule-body">
           <div class="text-title-medium font-weight-bold">{{ trip.elderName }}</div>
-          <div class="text-body-small text-medium-emphasis">{{ hospitalShort(trip.hospitalId) }} · {{ trip.department }}</div>
+          <div class="text-body-small text-medium-emphasis">{{ tripPlaceName(trip) }} · {{ trip.department }}</div>
           <StatusChip class="mt-2" :service="trip.serviceType" :status="trip.status" />
           <div v-if="trip.status !== 'requested'" class="schedule-steps">
             <span
@@ -108,7 +108,7 @@
   import FamilyNote from '@/components/FamilyNote.vue'
   import StatusChip from '@/components/StatusChip.vue'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
-  import { caregiverById, hospitalById } from '@/domain/data'
+  import { caregiverById, tripPlaceName } from '@/domain/data'
   import type { Trip } from '@/domain/types'
   import { dayLabel, isOpenStatus, nextActionLabel, PROVIDER_THAID, PROVIDER_TIERS, remainText, SELF_CAREGIVER_ID, statusFlow, statusLabel, tripStamp, viewStatus } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
@@ -129,10 +129,6 @@
       .sort((a, b) => tripStamp(a).localeCompare(tripStamp(b))),
   )
   const visitSteps = statusFlow('full').filter(step => step !== 'requested')
-
-  function hospitalShort(id: string) {
-    return hospitalById(id)?.short ?? 'สถานพยาบาล'
-  }
 
   function stepIndex(trip: Trip) {
     return visitSteps.indexOf(viewStatus(trip.status, trip.serviceType))

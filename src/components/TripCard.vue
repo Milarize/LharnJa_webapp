@@ -8,7 +8,7 @@
           {{ dayLabel(trip.date) }} · {{ trip.time }} น.
         </div>
         <div class="text-body-medium">
-          {{ hospital?.short }} · {{ trip.department }}
+          {{ hospital?.short || trip.pickup || 'สถานพยาบาล' }} · {{ trip.department }}
         </div>
         <div v-if="audience === 'caregiver'" class="text-body-small text-medium-emphasis mt-1">
           ครอบครัว{{ trip.familyName }} · {{ serviceLabel }} · {{ SERVICES[trip.serviceType].hours }}

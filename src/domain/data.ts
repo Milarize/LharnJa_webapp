@@ -146,6 +146,10 @@ export function hospitalById(id: string) {
   return hospitals.find(item => item.id === id)
 }
 
+export function tripPlaceName(trip: { hospitalId: string, pickup?: string }, fallback = 'สถานพยาบาล') {
+  return hospitalById(trip.hospitalId)?.short || trip.pickup || fallback
+}
+
 export function caregiverById(id: string) {
   return caregivers.find(item => item.id === id)
 }

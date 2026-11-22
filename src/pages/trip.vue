@@ -192,7 +192,17 @@
   }
   const route = useRoute()
   const trip = computed(() => store.trips.find(item => item.id === String(route.params.id)))
-  const hospital = computed(() => (trip.value ? hospitalById(trip.value.hospitalId) : undefined))
+  const hospital = computed(() => {
+    if (!trip.value) return undefined
+    return hospitalById(trip.value.hospitalId) ?? {
+      id: trip.value.hospitalId,
+      name: trip.value.pickup || 'สถานพยาบาล',
+      short: trip.value.pickup || 'สถานพยาบาล',
+      area: '',
+      lat: trip.value.placeLat ?? 0,
+      lng: trip.value.placeLng ?? 0,
+    }
+  })
   const caregiver = computed(() => (trip.value ? caregiverById(trip.value.caregiverId) : undefined))
   const flow = computed(() => (trip.value ? statusFlow(trip.value.serviceType) : []))
   const currentIndex = computed(() =>

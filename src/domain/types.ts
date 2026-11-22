@@ -111,6 +111,8 @@ export interface Trip {
   needs: NeedId[]
   note: string
   pickup: string
+  placeLat?: number
+  placeLng?: number
   caregiverId: string
   status: TripStatus
   price: number

@@ -119,25 +119,38 @@
           v-model="hospitalQuery"
           clearable
           hide-details
-          label="ค้นหาโรงพยาบาล คลินิก หรือศูนย์กายภาพ"
-          placeholder="เช่น ศิริราช หรือ ลาดพร้าว"
+          label="ค้นหาชื่อสถานพยาบาลเอง"
+          :loading="searching"
+          placeholder="เช่น เปาโลเกษตร"
           prepend-inner-icon="mdi-magnify"
         />
-        <PlaceMap class="mt-3" :hospitals="nearestHospitals" :selected-id="hospitalId" :user="userPoint" @select="chooseHospital" />
-        <p v-if="!nearestHospitals.length" class="text-body-medium text-medium-emphasis mt-3 mb-0">
-          ไม่พบสถานพยาบาลที่ตรงกับคำค้น
+        <PlaceMap
+          class="mt-3"
+          :confirm="confirmPoint"
+          :hospitals="shownPlaces"
+          :selected-id="hospitalId"
+          :user="userPoint"
+          @move="movePin"
+          @select="chooseHospital"
+        />
+        <p class="text-body-small text-medium-emphasis mt-2 mb-0">
+          {{ pinMoved ? 'ใช้ตำแหน่งที่เลื่อนบนแผนที่แล้ว' : 'เลือกชื่อจากรายการ แล้วเลื่อนหมุดสีส้มเพื่อยืนยันจุดนัด' }}
+        </p>
+        <p v-if="searching" class="text-body-medium text-medium-emphasis mt-3 mb-0">กำลังค้นหา</p>
+        <p v-else-if="hospitalQuery.trim().length >= 2 && !shownPlaces.length" class="text-body-medium text-medium-emphasis mt-3 mb-0">
+          ไม่พบชื่อนี้ เลื่อนหมุดบนแผนที่เพื่อปักจุดเอง
         </p>
         <div v-else class="d-flex flex-column ga-2 mt-3">
           <button
-            v-for="hospital in nearestHospitals"
+            v-for="hospital in shownPlaces"
             :key="hospital.id"
             class="hospital-row"
             :class="{ 'is-on': hospitalId === hospital.id }"
             type="button"
-            @click="chooseHospital(hospital.id)"
+            @click="choosePlace(hospital)"
           >
             <span>
-              <strong>{{ hospital.short }}</strong>
+              <strong>{{ hospital.name }}</strong>
               <span class="hospital-area">{{ hospital.area }}</span>
             </span>
             <span class="hospital-km">{{ formatKm(hospital.km) }}</span>
@@ -340,11 +353,12 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, reactive, ref, watch } from 'vue'
+  import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import PlaceMap from '@/components/PlaceMap.vue'
-  import type { CarePackageId, NeedId } from '@/domain/types'
+  import type { CarePackageId, Hospital, NeedId } from '@/domain/types'
   import { caregiverById, hospitals } from '@/domain/data'
+  import { searchPlaces } from '@/domain/placeSearch'
   import { distanceKm, formatKm, inServiceArea, type LatLng } from '@/domain/geo'
   import type { RankedCaregiver } from '@/domain/match'
   import { rankCaregivers } from '@/domain/match'
@@ -392,6 +406,11 @@
   const date = ref(isoOffset(1))
   const time = ref('09:00')
   const hospitalQuery = ref('')
+  const suggestions = ref<Hospital[]>([])
+  const found = ref<Hospital[]>([])
+  const chosen = ref<Hospital | null>(null)
+  const searching = ref(false)
+  const pinMoved = ref(false)
   const userPoint = ref<LatLng>({ lat: FAMILY.lat, lng: FAMILY.lng })
   const usingDevice = ref(false)
   const locating = ref(false)
@@ -401,6 +420,9 @@
   const needs = ref<NeedId[]>([])
   const caregiverId = ref('')
   let rankTimer = 0
+  let searchTimer = 0
+  let nearGen = 0
+  let queryGen = 0
 
   const titles = ['ผู้สูงอายุ', 'แพ็กเกจ', 'ไปเมื่อไร', 'ความต้องการ', 'เพื่อนดูแล', 'ยืนยันคำขอ']
   const careNeeds = NEED_OPTIONS.filter(item => item.group === 'care')
@@ -416,23 +438,23 @@
     }),
   )
   const selectedElder = computed(() => store.elders.find(item => item.id === elderId.value))
-  const selectedHospital = computed(() => hospitals.find(item => item.id === hospitalId.value))
-  const nearestHospitals = computed(() => {
-    const query = hospitalQuery.value.trim().toLowerCase()
-    return hospitals
-      .map(hospital => ({ ...hospital, km: distanceKm(userPoint.value, hospital) }))
-      .filter(hospital => {
-        if (!query) return true
-        return `${hospital.name} ${hospital.short} ${hospital.area}`.toLowerCase().includes(query)
-      })
-      .sort((a, b) => a.km - b.km)
+  const selectedHospital = computed(() => chosen.value)
+  const confirmPoint = computed<LatLng | null>(() =>
+    chosen.value ? { lat: chosen.value.lat, lng: chosen.value.lng } : null,
+  )
+  const shownPlaces = computed(() => {
+    const querying = hospitalQuery.value.trim().length >= 2
+    const source = querying ? found.value : suggestions.value
+    const withKm = source.map(place => ({ ...place, km: distanceKm(userPoint.value, place) }))
+    return querying ? withKm : [...withKm].sort((a, b) => a.km - b.km)
   })
   const locationHint = computed(() => {
-    if (hospitalQuery.value.trim()) return 'ผลการค้นหา ระยะทางวัดจากบ้าน'
-    if (locating.value) return 'กำลังอ่านตำแหน่งจากเครื่อง เพื่อเรียงโรงพยาบาลที่ใกล้บ้าน'
-    if (outsideArea.value) return 'ตำแหน่งนี้อยู่นอกพื้นที่ ใช้จุดที่บันทึกไว้เพื่อเรียงโรงพยาบาลใกล้บ้าน'
-    if (usingDevice.value) return 'เรียงโรงพยาบาลที่ใกล้บ้านจากตำแหน่งของคุณ พิมพ์ชื่อเพื่อค้นหา'
-    return 'เรียงโรงพยาบาลที่ใกล้บ้านจากจุดที่บันทึกไว้ พิมพ์ชื่อเพื่อค้นหา'
+    if (searching.value) return 'กำลังค้นหาจากแผนที่'
+    if (hospitalQuery.value.trim().length >= 2) return 'ผลการค้นหา เลือกชื่อแล้วเลื่อนหมุดสีส้มเพื่อยืนยันจุดนัด'
+    if (locating.value) return 'กำลังอ่านตำแหน่งจากเครื่อง เพื่อแนะนำจุดใกล้บ้าน'
+    if (outsideArea.value) return 'ตำแหน่งนี้อยู่นอกพื้นที่ ใช้จุดที่บันทึกไว้เพื่อแนะนำที่ใกล้บ้าน'
+    if (usingDevice.value) return 'แนะนำจุดใกล้ตำแหน่งของคุณ ค้นชื่อเองได้ แล้วเลื่อนหมุดเพื่อยืนยัน'
+    return 'แนะนำจุดใกล้บ้านก่อน ค้นชื่อเองได้ แล้วเลื่อนหมุดสีส้มเพื่อยืนยันจุดนัด'
   })
   const selectedRank = computed(() => ranked.value.find(item => item.caregiver.id === caregiverId.value))
   const selectedCare = computed(() => selectedRank.value?.caregiver)
@@ -466,6 +488,16 @@
       profession.value = source.profession || PACKAGE_PROFESSIONS[0]
       language.value = source.language || PACKAGE_LANGUAGES[0]
       hospitalId.value = source.hospitalId
+      const known = hospitals.find(item => item.id === source.hospitalId)
+      chosen.value = {
+        id: source.hospitalId,
+        name: known?.name || source.pickup || 'สถานพยาบาล',
+        short: known?.short || source.pickup || 'สถานพยาบาล',
+        area: known?.area || '',
+        lat: source.placeLat ?? known?.lat ?? FAMILY.lat,
+        lng: source.placeLng ?? known?.lng ?? FAMILY.lng,
+      }
+      pinMoved.value = source.placeLat != null
       department.value = source.department
       needs.value = [...source.needs]
       hospitalTouched.value = true
@@ -492,15 +524,86 @@
     }
   })
 
-  function chooseHospital(id: string) {
+  function choosePlace(place: Hospital) {
     hospitalTouched.value = true
-    hospitalId.value = id
+    pinMoved.value = false
+    chosen.value = { ...place }
+    hospitalId.value = place.id
+  }
+
+  function chooseHospital(id: string) {
+    const place = shownPlaces.value.find(item => item.id === id)
+    if (place) choosePlace(place)
+  }
+
+  function movePin(point: LatLng) {
+    hospitalTouched.value = true
+    pinMoved.value = true
+    const base = chosen.value ?? {
+      id: `pin-${Date.now()}`,
+      name: hospitalQuery.value.trim() || 'จุดที่ปักบนแผนที่',
+      short: 'จุดนัด',
+      area: 'ยืนยันจากหมุด',
+      lat: point.lat,
+      lng: point.lng,
+    }
+    chosen.value = { ...base, lat: point.lat, lng: point.lng }
+    hospitalId.value = chosen.value.id
+  }
+
+  function localSuggestions(point: LatLng) {
+    return [...hospitals]
+      .sort((a, b) => distanceKm(point, a) - distanceKm(point, b))
+      .slice(0, 6)
   }
 
   function applyNearest() {
     if (hospitalTouched.value) return
-    const first = nearestHospitals.value[0]
-    if (first) hospitalId.value = first.id
+    const first = [...suggestions.value].sort((a, b) => distanceKm(userPoint.value, a) - distanceKm(userPoint.value, b))[0]
+    if (!first) return
+    pinMoved.value = false
+    chosen.value = { ...first }
+    hospitalId.value = first.id
+  }
+
+  async function loadNearby() {
+    const gen = ++nearGen
+    const point = { ...userPoint.value }
+    try {
+      const places = await searchPlaces({ lat: point.lat, lng: point.lng, nearby: true })
+      if (gen !== nearGen) return
+      suggestions.value = (places.length ? places : localSuggestions(point)).slice(0, 6)
+    } catch {
+      if (gen !== nearGen) return
+      suggestions.value = localSuggestions(point)
+    }
+    applyNearest()
+  }
+
+  async function runSearch(query: string) {
+    const gen = ++queryGen
+    try {
+      const places = await searchPlaces({ keyword: query, lat: userPoint.value.lat, lng: userPoint.value.lng })
+      if (gen !== queryGen || hospitalQuery.value.trim() !== query) return
+      found.value = places
+      searching.value = false
+      if (!places.length && !chosen.value) {
+        chosen.value = {
+          id: `pin-${query}`,
+          name: query,
+          short: 'จุดนัด',
+          area: 'ปักเองบนแผนที่',
+          lat: userPoint.value.lat,
+          lng: userPoint.value.lng,
+        }
+        hospitalId.value = chosen.value.id
+        hospitalTouched.value = true
+      }
+    } catch {
+      if (gen !== queryGen) return
+      found.value = []
+      searching.value = false
+    }
   }
 
   function locate() {
@@ -530,9 +633,30 @@
     )
   }
 
+  watch(hospitalQuery, value => {
+    window.clearTimeout(searchTimer)
+    const query = value.trim()
+    if (query.length < 2) {
+      found.value = []
+      searching.value = false
+      return
+    }
+    searching.value = true
+    searchTimer = window.setTimeout(() => void runSearch(query), 400)
+  })
+
+  watch(
+    () => [userPoint.value.lat, userPoint.value.lng],
+    () => void loadNearby(),
+  )
+
   onMounted(() => {
-    applyNearest()
+    void loadNearby()
     locate()
+  })
+
+  onBeforeUnmount(() => {
+    window.clearTimeout(searchTimer)
   })
 
   function toggleNeed(id: NeedId) {
@@ -588,8 +712,8 @@
       return
     }
     if (step.value === 3) {
-      if (!hospitalId.value || !date.value || !time.value) {
-        error.value = 'เลือกสถานพยาบาล วันที่ และเวลา'
+      if (!chosen.value || !date.value || !time.value) {
+        error.value = 'เลือกสถานพยาบาลหรือปักหมุด แล้วเลือกวันที่และเวลา'
         return
       }
       if (date.value < earliest || date.value > latest.value) {
@@ -634,6 +758,8 @@
       needs: [...needs.value],
       note: note.value.trim(),
       pickup: selectedHospital.value?.name ?? '',
+      placeLat: selectedHospital.value?.lat,
+      placeLng: selectedHospital.value?.lng,
       caregiverId: rankedCare.caregiver.id,
       price: selectedPackage.value.price,
       repeatOf:

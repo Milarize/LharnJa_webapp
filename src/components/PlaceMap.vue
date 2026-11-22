@@ -14,9 +14,13 @@
     hospitals: Hospital[]
     selectedId: string
     user: LatLng
+    confirm: LatLng | null
   }>()
 
-  const emit = defineEmits<{ select: [id: string] }>()
+  const emit = defineEmits<{
+    select: [id: string]
+    move: [point: LatLng]
+  }>()
 
   const mapId = `care-place-map-${Math.random().toString(36).slice(2, 8)}`
   const el = ref<HTMLElement | null>(null)
@@ -152,7 +156,16 @@
     return canvas.toDataURL('image/png')
   }
 
-  async function hospitalPin(label: string, selected: boolean) {
+  function toLatLng(point: { lat?: number, lon?: number } | undefined) {
+    if (!point || typeof point.lat !== 'number' || typeof point.lon !== 'number') return null
+    if (Math.abs(point.lat) <= 90 && Math.abs(point.lon) <= 180) return { lat: point.lat, lng: point.lon }
+    const lng = (point.lon / 20037508.342789244) * 180
+    const lat = (Math.atan(Math.exp((point.lat / 20037508.342789244) * Math.PI)) * 360) / Math.PI - 90
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null
+    return { lat, lng }
+  }
+
+  async function hospitalPin(label: string, selected: boolean, tone: 'teal' | 'orange' = 'teal') {
     await document.fonts.load('700 12px "IBM Plex Sans Thai"')
     const measure = document.createElement('canvas').getContext('2d')
     const font = '700 12px "IBM Plex Sans Thai", sans-serif'
@@ -160,15 +173,17 @@
     measure.font = font
     const width = Math.min(180, Math.max(76, Math.ceil(measure.measureText(label).width) + 24))
     const height = 28
+    const ink = tone === 'orange' ? '#d4654a' : '#0e6b62'
+    const filled = selected || tone === 'orange'
     const url = await raster((ctx, boxWidth, boxHeight) => {
       ctx.font = font
-      ctx.fillStyle = selected ? '#0e6b62' : '#ffffff'
-      ctx.strokeStyle = '#0e6b62'
+      ctx.fillStyle = filled ? ink : '#ffffff'
+      ctx.strokeStyle = ink
       ctx.lineWidth = 2
       roundRect(ctx, boxWidth, boxHeight, 14)
       ctx.fill()
       ctx.stroke()
-      ctx.fillStyle = selected ? '#ffffff' : '#0e6b62'
+      ctx.fillStyle = filled ? '#ffffff' : ink
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(label, boxWidth / 2, boxHeight / 2 + 1)
@@ -203,22 +218,35 @@
       hospital,
       pin: await hospitalPin(hospital.short, hospital.id === props.selectedId),
     })))
+    const confirmArt = props.confirm ? await hospitalPin('ยืนยัน', true, 'orange') : null
     if (!alive || gen !== drawGen || !layer) return
     layer.clear()
     const userMarker = new api.maps.symbols.Marker(user)
     userMarker.onClick = () => {}
     layer.addMarker(props.user.lat, props.user.lng, userMarker)
     pins.forEach(({ hospital, pin }) => {
-      if (!pin.url) return
+      if (!pin.url || (props.confirm && hospital.id === props.selectedId)) return
       const marker = new api.maps.symbols.Marker(pin)
       marker.onClick = () => emit('select', hospital.id)
       layer?.addMarker(hospital.lat, hospital.lng, marker)
     })
+    if (props.confirm && confirmArt?.url) {
+      const marker = new api.maps.symbols.Marker({ ...confirmArt, draggable: true })
+      marker.onClick = () => {}
+      marker.onDragStart = () => {}
+      marker.onDragMove = () => {}
+      marker.onDragEnd = point => {
+        const next = toLatLng(point)
+        if (next) emit('move', next)
+      }
+      layer.addMarker(props.confirm.lat, props.confirm.lng, marker)
+    }
     if (!fit || !map.setExtent) return
     try {
       map.setExtent([
         [props.user.lat, props.user.lng],
         ...props.hospitals.map(hospital => [hospital.lat, hospital.lng]),
+        ...(props.confirm ? [[props.confirm.lat, props.confirm.lng]] : []),
       ])
     } catch {
       /* คงระดับซูมเริ่มต้นถ้าชุดพิกัดนี้ใช้กับแผนที่ไม่ได้ */
@@ -258,7 +286,7 @@
   })
 
   watch(
-    () => props.selectedId,
+    () => [props.selectedId, props.confirm ? `${props.confirm.lat.toFixed(5)},${props.confirm.lng.toFixed(5)}` : ''],
     () => void draw(false),
   )
 

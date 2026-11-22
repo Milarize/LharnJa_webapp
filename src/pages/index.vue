@@ -96,7 +96,7 @@
   import { useRouter } from 'vue-router'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
   import CareUpdateCard from '@/components/CareUpdateCard.vue'
-  import { caregiverById, hospitalById } from '@/domain/data'
+  import { caregiverById, tripPlaceName } from '@/domain/data'
   import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, PROVIDER_THAID } from '@/domain/model'
   import CaregiverPage from '@/pages/caregiver.vue'
   import { useCareStore } from '@/stores/care'
@@ -133,7 +133,7 @@
       .filter(trip => trip.owner === 'me')
       .flatMap(trip => {
         const nickname = caregiverById(trip.caregiverId)?.nickname ?? 'ผู้ดูแล'
-        const place = hospitalById(trip.hospitalId)?.short ?? 'สถานพยาบาล'
+        const place = tripPlaceName(trip)
         return trip.timeline.flatMap(event => {
           const text = familyStatusText(event.status, nickname, trip.elderName, place)
           if (!text) return []

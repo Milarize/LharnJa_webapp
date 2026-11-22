@@ -148,7 +148,7 @@
   import { computed, reactive, ref, watch } from 'vue'
   import CareUpdateCard from '@/components/CareUpdateCard.vue'
   import type { ShareBasis, Trip } from '@/domain/types'
-  import { hospitalById } from '@/domain/data'
+  import { tripPlaceName } from '@/domain/data'
   import { CARE_CLOSING, careUpdate, FAMILY_MEMBERS, HEALTH_SHARE_CAUTION, needsFollowUp, noteGaps, PROVIDER_TIERS, SHARE_BASIS, TIME_SLOTS } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
@@ -234,7 +234,7 @@
   }
 
   const needsAppointment = computed(() => needsFollowUp(draft.nextVisit))
-  const hospital = computed(() => hospitalById(props.trip.hospitalId)?.short ?? 'สถานพยาบาล')
+  const hospital = computed(() => tripPlaceName(props.trip))
   const followUpLine = computed(() => {
     if (!needsAppointment.value) return ''
     if (!draft.followUpDate || !draft.followUpTime) return 'ยังไม่ได้จดวันและเวลา'

@@ -1,7 +1,7 @@
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { Elder, ProviderTier, Role, Trip, TripStatus, VisitNote } from '@/domain/types'
-import { caregiverById, createSeed, hospitalById } from '@/domain/data'
+import { caregiverById, createSeed, tripPlaceName } from '@/domain/data'
 import { rankCaregivers } from '@/domain/match'
 import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, initialFromName, nextStatus, noteGaps, noteMessage, PROVIDER_TIERS, RESPOND_MS, SEED_RESPOND_MS, statusLabel, uid } from '@/domain/model'
 
@@ -39,6 +39,8 @@ export interface NewTripInput {
   needs: Trip['needs']
   note: string
   pickup: string
+  placeLat?: number
+  placeLng?: number
   caregiverId: string
   price: number
   repeatOf?: string
@@ -251,7 +253,7 @@ export const useCareStore = defineStore('care', () => {
     const trip = trips.value.find(item => item.id === id)
     if (!trip || trip.status !== 'requested') return
     const nickname = caregiverById(trip.caregiverId)?.nickname ?? 'ผู้ดูแล'
-    const place = hospitalById(trip.hospitalId)?.short ?? 'สถานพยาบาล'
+    const place = tripPlaceName(trip)
     patchStatus(id, 'confirmed', familyStatusText('confirmed', nickname, trip.elderName, place))
     trip.respondBy = undefined
     ensureClock()
@@ -268,7 +270,7 @@ export const useCareStore = defineStore('care', () => {
     const next = nextStatus(trip.status, trip.serviceType)
     if (!next) return
     const nickname = caregiverById(trip.caregiverId)?.nickname ?? 'ผู้ดูแล'
-    const place = hospitalById(trip.hospitalId)?.short ?? 'สถานพยาบาล'
+    const place = tripPlaceName(trip)
     if (next === 'completed' && !trip.visitNote?.sentAt) {
       const sent = sendVisitNote(id, trip.visitNote?.sentTo ?? [])
       if (!sent) {
