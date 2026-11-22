@@ -181,7 +181,7 @@
   import CareUpdateCard from '@/components/CareUpdateCard.vue'
   import TimeWheel from '@/components/TimeWheel.vue'
   import type { ShareBasis, Trip } from '@/domain/types'
-  import { hospitals, tripPlaceName } from '@/domain/data'
+  import { tripPlaceName } from '@/domain/data'
   import { appointmentDate, CARE_CLOSING, careUpdate, FAMILY_MEMBERS, needsFollowUp, noteGaps, PROVIDER_TIERS, SHARE_BASIS } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
@@ -271,26 +271,15 @@
   const hospital = computed(() => tripPlaceName(props.trip))
   const currentPlace = computed(() => props.trip.pickup || hospital.value)
   const placeChoices = computed(() => {
-    const current = {
-      title: currentPlace.value,
-      subtitle: `นัดนี้ · ${props.trip.department}`,
-      value: currentPlace.value,
-    }
-    const seen = new Set([current.value])
-    const others = hospitals
-      .map(item => ({
-        title: item.name,
-        subtitle: `${item.area} · ${props.trip.department}`,
-        value: item.name,
-      }))
-      .filter(item => {
-        if (seen.has(item.value) || item.title === hospital.value || item.value === hospital.value) return false
-        seen.add(item.value)
-        return true
-      })
-    const choices = [current, ...others]
-    if (draft.followUpPlace && !choices.some(item => item.value === draft.followUpPlace)) {
-      choices.splice(1, 0, {
+    const choices = [
+      {
+        title: currentPlace.value,
+        subtitle: `สถานที่ปัจจุบัน · ${props.trip.department}`,
+        value: currentPlace.value,
+      },
+    ]
+    if (draft.followUpPlace && draft.followUpPlace !== currentPlace.value) {
+      choices.push({
         title: draft.followUpPlace,
         subtitle: 'ที่เลือกไว้',
         value: draft.followUpPlace,
