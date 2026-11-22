@@ -1,8 +1,20 @@
 import { createVuetify } from 'vuetify'
+import { th } from 'vuetify/locale'
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
+import { appointmentDate } from '@/domain/model'
 
 export default createVuetify({
+  locale: {
+    locale: 'th',
+    fallback: 'en',
+    messages: { th },
+  },
+  date: {
+    formats: {
+      appointment: appointmentDate,
+    },
+  },
   theme: {
     defaultTheme: 'careLight',
     themes: {

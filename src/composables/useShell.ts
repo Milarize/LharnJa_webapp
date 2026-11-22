@@ -4,7 +4,7 @@ import type { Role } from '@/domain/types'
 import { useCareStore } from '@/stores/care'
 
 export interface NavItem {
-  name: 'home' | 'book' | 'trips' | 'plans' | 'caregiver'
+  name: 'home' | 'book' | 'trips' | 'history' | 'plans' | 'caregiver'
   title: string
   icon: string
 }
@@ -13,6 +13,7 @@ const familyNav: NavItem[] = [
   { name: 'home', title: 'หน้าแรก', icon: 'mdi-home' },
   { name: 'book', title: 'จอง', icon: 'mdi-calendar-plus' },
   { name: 'trips', title: 'นัดหมาย', icon: 'mdi-clipboard-text-outline' },
+  { name: 'history', title: 'ประวัติ', icon: 'mdi-history' },
   { name: 'plans', title: 'แพ็กเกจ', icon: 'mdi-star-circle-outline' },
 ]
 

@@ -5,6 +5,7 @@ import Book from '@/pages/book.vue'
 import Trips from '@/pages/trips.vue'
 import Trip from '@/pages/trip.vue'
 import Plans from '@/pages/plans.vue'
+import History from '@/pages/history.vue'
 import Caregiver from '@/pages/caregiver.vue'
 
 const router = createRouter({
@@ -18,7 +19,9 @@ const router = createRouter({
     { path: '/book', name: 'book', component: Book },
     { path: '/trips', name: 'trips', component: Trips },
     { path: '/trips/:id', name: 'trip', component: Trip },
-    { path: '/plans', name: 'plans', component: Plans },
+    { path: '/packages', name: 'plans', component: Plans },
+    { path: '/plans', redirect: { name: 'plans' } },
+    { path: '/history', name: 'history', component: History },
     { path: '/caregiver', name: 'caregiver', component: Caregiver },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
@@ -31,6 +34,7 @@ const titles: Record<string, string> = {
   trips: 'นัดหมาย · หลานจ๋า',
   trip: 'สถานะนัด · หลานจ๋า',
   plans: 'แพ็กเกจ · หลานจ๋า',
+  history: 'ประวัติ · หลานจ๋า',
   caregiver: 'งานของผู้ดูแล · หลานจ๋า',
 }
 

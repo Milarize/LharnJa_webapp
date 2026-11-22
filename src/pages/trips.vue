@@ -12,19 +12,27 @@
       <v-btn color="primary" :to="{ name: 'book' }">จองเพื่อนดูแล</v-btn>
     </v-card>
 
-    <h2 class="text-title-large font-weight-medium mb-3">ที่ผ่านมา</h2>
-    <div v-if="past.length" class="d-flex flex-column ga-3">
-      <TripCard v-for="trip in past" :key="trip.id" :trip="trip">
-        <v-btn
-          v-if="trip.status === 'completed'"
-          class="mt-3"
-          color="primary"
-          prepend-icon="mdi-calendar-sync"
-          variant="tonal"
-          @click.stop="rebook(trip.id)"
-        >
-          จองซ้ำกับ{{ caregiverName(trip.caregiverId) }}
-        </v-btn>
+    <div class="d-flex align-center justify-space-between ga-3 mb-3">
+      <h2 class="text-title-large font-weight-medium mb-0">ที่ผ่านมา</h2>
+      <v-btn prepend-icon="mdi-history" size="small" variant="text" :to="{ name: 'history' }">ดูประวัติ</v-btn>
+    </div>
+    <div v-if="pastPreview.length" class="d-flex flex-column ga-3">
+      <TripCard v-for="trip in pastPreview" :key="trip.id" :trip="trip">
+        <div class="d-flex flex-wrap ga-2 mt-3">
+          <v-btn
+            v-if="canRebookTrip(trip)"
+            color="primary"
+            prepend-icon="mdi-calendar-sync"
+            size="small"
+            variant="tonal"
+            @click.stop="rebook(trip.id)"
+          >
+            จองซ้ำกับ{{ caregiverName(trip.caregiverId) }}
+          </v-btn>
+          <v-btn size="small" variant="text" :to="{ name: 'history' }" @click.stop>
+            ติดต่อจากประวัติ
+          </v-btn>
+        </div>
       </TripCard>
     </div>
     <p v-else class="text-body-medium text-medium-emphasis">ยังไม่มีนัดที่จบแล้ว</p>
@@ -36,7 +44,7 @@
   import TripCard from '@/components/TripCard.vue'
   import { useRouter } from 'vue-router'
   import { caregiverName } from '@/domain/match'
-  import { isOpenStatus, tripStamp } from '@/domain/model'
+  import { canRebookTrip, isOpenStatus, tripStamp } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
   const store = useCareStore()
@@ -52,4 +60,5 @@
   const past = computed(() =>
     mine.value.filter(trip => !isOpenStatus(trip.status)).sort((a, b) => tripStamp(b).localeCompare(tripStamp(a))),
   )
+  const pastPreview = computed(() => past.value.slice(0, 3))
 </script>

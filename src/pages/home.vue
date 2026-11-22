@@ -6,7 +6,7 @@
       <template #prepend>
         <img alt="" class="thaid-mark" src="/thaid.png" />
       </template>
-      ยืนยัน ThaiD ครั้งแรกแล้ว
+      ยืนยัน ThaID ครั้งแรกแล้ว
     </v-chip>
     <p v-else class="text-body-medium mb-3">ยืนยันตัวตนครั้งแรกจากหน้า LINE แล้วครั้งถัดไปไม่ต้องทำอีก</p>
     <p class="text-body-large text-medium-emphasis mb-6">
@@ -17,7 +17,7 @@
       <div class="text-label-large mb-2" style="opacity: .85">นัดถัดไป</div>
       <div class="text-headline-small font-weight-medium mb-1">{{ nextTrip.elderName }}</div>
       <div class="text-body-large mb-1">
-        {{ dayLabel(nextTrip.date) }} · {{ nextTrip.time }} น. · {{ hospitalName(nextTrip.hospitalId) }}
+        {{ dayLabel(nextTrip.date) }} · {{ nextTrip.time }} น. · {{ tripPlaceName(nextTrip, 'โรงพยาบาล') }}
       </div>
       <div class="text-body-medium mb-4" style="opacity: .9">
         {{ nextTrip.department }} · {{ caregiverName(nextTrip.caregiverId) }}
@@ -55,7 +55,7 @@
                 <v-chip class="mb-2" color="primary" size="small" variant="tonal">คนเดิมของบ้านนี้</v-chip>
                 <div class="text-title-medium font-weight-bold">{{ item.caregiver?.nickname }}</div>
                 <div class="text-body-medium">
-                  เคยพา{{ item.latest.elderName }}ไป{{ hospitalName(item.latest.hospitalId) }} {{ item.count }} นัด
+                  เคยพา{{ item.latest.elderName }}ไป{{ tripPlaceName(item.latest, 'โรงพยาบาล') }} {{ item.count }} นัด
                 </div>
                 <div v-if="item.upcoming" class="text-body-medium text-medium-emphasis">
                   กำลังมีนัด{{ item.upcoming.elderName }} {{ dayLabel(item.upcoming.date) }} {{ item.upcoming.time }} น.
@@ -67,7 +67,7 @@
               <v-btn
                 color="primary"
                 prepend-icon="mdi-calendar-sync"
-                :to="{ name: 'book', query: { rebook: item.latest.id } }"
+                :to="{ name: 'book', query: { rebook: item.rebookFrom?.id ?? item.latest.id } }"
               >
                 จองซ้ำกับ{{ item.caregiver?.nickname }}
               </v-btn>
@@ -83,6 +83,9 @@
       </v-btn>
       <v-btn prepend-icon="mdi-clipboard-text-outline" size="large" variant="outlined" :to="{ name: 'trips' }">
         นัดทั้งหมด
+      </v-btn>
+      <v-btn prepend-icon="mdi-history" size="large" variant="outlined" :to="{ name: 'history' }">
+        ประวัติ
       </v-btn>
     </div>
 
@@ -109,7 +112,7 @@
 
 <script setup lang="ts">
   import { computed } from 'vue'
-  import { caregiverById, hospitalById } from '@/domain/data'
+  import { caregiverById, tripPlaceName } from '@/domain/data'
   import { caregiverName } from '@/domain/match'
   import { dayLabel, FAMILY, greeting, isOpenStatus, repeatCompanions, statusLabel, tripStamp } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
@@ -133,9 +136,6 @@
     })),
   )
 
-  function hospitalName(id: string) {
-    return hospitalById(id)?.short ?? 'โรงพยาบาล'
-  }
 </script>
 
 <style scoped>

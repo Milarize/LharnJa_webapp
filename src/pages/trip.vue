@@ -90,9 +90,8 @@
           <p class="text-body-medium mb-3">{{ caregiver?.bio }}</p>
           <div class="d-flex flex-wrap ga-2">
             <v-btn prepend-icon="mdi-phone" variant="outlined" @click="fake('โทร')">โทร</v-btn>
-            <v-btn prepend-icon="mdi-chat" variant="outlined" @click="fake('ส่งข้อความ')">ข้อความ</v-btn>
             <v-btn
-              v-if="trip.owner === 'me' && trip.status === 'completed' && trip.packageId !== 'p1'"
+              v-if="trip.owner === 'me' && canRebookTrip(trip)"
               color="primary"
               prepend-icon="mdi-calendar-sync"
               :to="{ name: 'book', query: { rebook: trip.id } }"
@@ -114,9 +113,33 @@
           </div>
         </v-card>
 
-        <div v-if="store.role === 'caregiver' && viewStatus(trip.status, trip.serviceType) === 'with_doctor'" class="mt-4">
+        <v-alert
+          v-if="packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor' && store.role !== 'caregiver'"
+          class="mt-4"
+          icon="mdi-account-switch"
+          type="info"
+          variant="tonal"
+        >
+          นัดนี้อยู่ขั้นช่วยฟังหมอแล้ว สลับเป็นผู้ดูแลด้านบนเพื่อกรอกสรุปให้ลูกหลาน
+        </v-alert>
+        <div
+          v-else-if="store.role === 'caregiver' && packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor'"
+          class="mt-4"
+        >
+          <p class="text-body-medium text-medium-emphasis mb-3">
+            ถึงขั้นช่วยฟังหมอแล้ว สรุปให้นัดนี้ที่นี่ แล้วค่อยจบงาน
+          </p>
           <FamilyNote :trip="trip" />
         </div>
+        <v-alert
+          v-else-if="store.role === 'caregiver' && packageHasNotes(trip.packageId) && trip.status !== 'completed' && trip.status !== 'cancelled'"
+          class="mt-4"
+          icon="mdi-note-text-outline"
+          type="info"
+          variant="tonal"
+        >
+          สรุปให้ลูกหลานจะโผล่เมื่อถึงขั้นช่วยฟังหมอ ใช้แผงสาธิตด้านล่างเดินสถานะได้
+        </v-alert>
       </v-col>
     </v-row>
 
@@ -173,7 +196,9 @@
     carePackage,
     dayLabel,
     needLabel,
+    canRebookTrip,
     nextActionLabel,
+    packageHasNotes,
     SERVICES,
     statusFlow,
     statusLabel,
@@ -192,14 +217,26 @@
   }
   const route = useRoute()
   const trip = computed(() => store.trips.find(item => item.id === String(route.params.id)))
-  const hospital = computed(() => (trip.value ? hospitalById(trip.value.hospitalId) : undefined))
+  const hospital = computed(() => {
+    if (!trip.value) return undefined
+    return hospitalById(trip.value.hospitalId) ?? {
+      id: trip.value.hospitalId,
+      name: trip.value.pickup || 'สถานพยาบาล',
+      short: trip.value.pickup || 'สถานพยาบาล',
+      area: '',
+      lat: trip.value.placeLat ?? 0,
+      lng: trip.value.placeLng ?? 0,
+    }
+  })
   const caregiver = computed(() => (trip.value ? caregiverById(trip.value.caregiverId) : undefined))
-  const flow = computed(() => (trip.value ? statusFlow(trip.value.serviceType) : []))
+  const flow = computed(() => (trip.value ? statusFlow(trip.value.serviceType, trip.value.packageId) : []))
   const currentIndex = computed(() =>
     trip.value ? flow.value.indexOf(viewStatus(trip.value.status, trip.value.serviceType)) : -1,
   )
   const nextLabel = computed(() =>
-    trip.value && trip.value.status !== 'requested' ? nextActionLabel(trip.value.status, trip.value.serviceType) : null,
+    trip.value && trip.value.status !== 'requested'
+      ? nextActionLabel(trip.value.status, trip.value.serviceType, trip.value.packageId)
+      : null,
   )
   const remain = computed(() => remainText(trip.value?.respondBy, store.clock))
 

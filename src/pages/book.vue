@@ -52,31 +52,16 @@
 
     <div v-else-if="step === 2">
       <p class="text-body-medium text-medium-emphasis mb-4">
-        เติมแพ็กเกจต่อการจองครั้งนี้ ไม่มีการสมัครรายเดือน ผู้ดูแลไปพบที่โรงพยาบาลแล้วอยู่ดูแลระหว่างพบแพทย์
+        เลือกการดูแลครั้งนี้ จ่ายตอนจองครั้งเดียว
       </p>
       <v-row>
-        <v-col v-for="item in CARE_PACKAGES" :key="item.id" cols="12">
-          <v-card
-            class="pa-4"
-            :color="packageId === item.id ? 'primary' : undefined"
-            role="button"
-            rounded="md"
-            tabindex="0"
-            :variant="packageId === item.id ? 'tonal' : 'outlined'"
-            @click="packageId = item.id"
-            @keydown.enter="packageId = item.id"
-          >
-            <div class="d-flex justify-space-between align-start ga-3">
-              <div>
-                <div class="text-title-medium font-weight-medium">{{ item.name }}</div>
-                <div class="text-body-small text-medium-emphasis">{{ item.lead }}</div>
-              </div>
-              <div class="text-title-medium font-weight-bold">{{ baht(item.price) }}</div>
-            </div>
-            <ul class="package-points mt-3 mb-0">
-              <li v-for="point in item.points" :key="point">{{ point }}</li>
-            </ul>
-          </v-card>
+        <v-col v-for="item in packageChoices" :key="item.id" cols="12">
+          <PackageChoice
+            :item="item"
+            selectable
+            :selected="packageId === item.id"
+            @select="selectPackage"
+          />
         </v-col>
       </v-row>
       <div v-if="selectedPackage.profession" class="d-flex flex-column ga-4 mt-5">
@@ -113,31 +98,47 @@
 
     <div v-else-if="step === 3" class="d-flex flex-column ga-5">
       <div>
-        <div class="text-label-large mb-1">โรงพยาบาลใกล้บ้าน</div>
+        <div class="text-label-large mb-1">ไปที่ไหน</div>
         <p class="text-body-small text-medium-emphasis mb-3">{{ locationHint }}</p>
         <v-text-field
           v-model="hospitalQuery"
           clearable
           hide-details
-          label="ค้นหาโรงพยาบาล คลินิก หรือศูนย์กายภาพ"
-          placeholder="เช่น ศิริราช หรือ ลาดพร้าว"
+          label="พิมพ์ชื่อสถานที่ที่จะไป"
+          :loading="searching"
+          placeholder="เช่น โรงพยาบาลเปาโล รามาธิบดี คลินิก…"
           prepend-inner-icon="mdi-magnify"
         />
-        <PlaceMap class="mt-3" :hospitals="nearestHospitals" :selected-id="hospitalId" :user="userPoint" @select="chooseHospital" />
-        <p v-if="!nearestHospitals.length" class="text-body-medium text-medium-emphasis mt-3 mb-0">
-          ไม่พบสถานพยาบาลที่ตรงกับคำค้น
+        <PlaceMap
+          class="mt-3"
+          :confirm="confirmPoint"
+          :hospitals="shownPlaces"
+          :selected-id="hospitalId"
+          :user="userPoint"
+          @move="movePin"
+          @select="chooseHospital"
+        />
+        <p class="text-body-small text-medium-emphasis mt-2 mb-0">
+          {{ pinMoved ? 'ใช้ตำแหน่งที่เลื่อนบนแผนที่แล้ว' : 'เลือกจากผลการค้นหา แล้วเลื่อนหมุดสีส้มเพื่อยืนยันจุดนัด' }}
+        </p>
+        <p v-if="searching" class="text-body-medium text-medium-emphasis mt-3 mb-0">กำลังค้นหา</p>
+        <p v-else-if="hospitalQuery.trim().length < 2" class="text-body-medium text-medium-emphasis mt-3 mb-0">
+          พิมพ์อย่างน้อย 2 ตัวอักษร เพื่อค้นจากแผนที่ NOSTRA
+        </p>
+        <p v-else-if="!shownPlaces.length" class="text-body-medium text-medium-emphasis mt-3 mb-0">
+          ไม่พบชื่อนี้ เลื่อนหมุดบนแผนที่เพื่อปักจุดเอง
         </p>
         <div v-else class="d-flex flex-column ga-2 mt-3">
           <button
-            v-for="hospital in nearestHospitals"
+            v-for="hospital in shownPlaces"
             :key="hospital.id"
             class="hospital-row"
             :class="{ 'is-on': hospitalId === hospital.id }"
             type="button"
-            @click="chooseHospital(hospital.id)"
+            @click="choosePlace(hospital)"
           >
             <span>
-              <strong>{{ hospital.short }}</strong>
+              <strong>{{ hospital.name }}</strong>
               <span class="hospital-area">{{ hospital.area }}</span>
             </span>
             <span class="hospital-km">{{ formatKm(hospital.km) }}</span>
@@ -145,26 +146,34 @@
         </div>
       </div>
 
-      <v-text-field v-model="date" hide-details label="วันที่นัด" :max="latest" :min="earliest" type="date" />
+      <v-menu v-model="dateMenu" :close-on-content-click="false" location="bottom start">
+        <template #activator="{ props: menu }">
+          <v-text-field
+            v-bind="menu"
+            hide-details
+            label="วันที่นัด"
+            prepend-inner-icon="mdi-calendar"
+            readonly
+            :model-value="appointmentDate(date)"
+          />
+        </template>
+        <v-date-picker
+          color="primary"
+          header-date-format="appointment"
+          :max="latest"
+          :min="earliest"
+          :model-value="date"
+          @update:model-value="chooseDate"
+        />
+      </v-menu>
+      <p class="text-body-small text-medium-emphasis mt-2 mb-0">{{ dateHint }}</p>
 
       <div>
         <div class="text-label-large mb-2">เวลานัด</div>
-        <div class="d-flex flex-wrap ga-2">
-          <v-chip
-            v-for="slot in TIME_SLOTS"
-            :key="slot"
-            :color="time === slot ? 'primary' : undefined"
-            :variant="time === slot ? 'flat' : 'outlined'"
-            @click="time = slot"
-          >
-            {{ slot }} น.
-          </v-chip>
-        </div>
+        <TimeWheel v-model="time" :min-time="earliestTime || undefined" />
+        <p class="text-body-small text-medium-emphasis mt-2 mb-0">{{ timeHint }}</p>
       </div>
 
-      <p class="text-body-small text-medium-emphasis mb-0">
-        {{ selectedPackage.lead }} ผู้ดูแลไปพบที่โรงพยาบาลที่เลือก แล้วอยู่ดูแลระหว่างพบแพทย์
-      </p>
     </div>
 
     <div v-else-if="step === 4">
@@ -340,17 +349,22 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, reactive, ref, watch } from 'vue'
+  import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import PlaceMap from '@/components/PlaceMap.vue'
-  import type { CarePackageId, NeedId } from '@/domain/types'
-  import { caregiverById, hospitals } from '@/domain/data'
+  import PackageChoice from '@/components/PackageChoice.vue'
+  import TimeWheel from '@/components/TimeWheel.vue'
+  import type { CarePackageId, Hospital, NeedId } from '@/domain/types'
+  import { caregiverById, tripPlaceName } from '@/domain/data'
+  import { searchPlaces } from '@/domain/placeSearch'
   import { distanceKm, formatKm, inServiceArea, type LatLng } from '@/domain/geo'
   import type { RankedCaregiver } from '@/domain/match'
   import { rankCaregivers } from '@/domain/match'
   import {
+    appointmentDate,
     baht,
     CARE_PACKAGES,
+    canRebookTrip,
     carePackage,
     dayLabel,
     DEPARTMENTS,
@@ -360,7 +374,8 @@
     PACKAGE_LANGUAGES,
     PACKAGE_PROFESSIONS,
     packageMaxDate,
-    TIME_SLOTS,
+    packageMinDate,
+    packageMinTime,
   } from '@/domain/model'
   import { FAMILY } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
@@ -379,9 +394,23 @@
   const language = ref(PACKAGE_LANGUAGES[0])
   const hospitalId = ref('')
   const department = ref('อายุรกรรม')
-  const earliest = isoOffset(1)
+  const date = ref(packageMinDate('p1'))
+  const dateMenu = ref(false)
+  const time = ref('09:00')
+  const earliest = computed(() => packageMinDate(packageId.value))
   const selectedPackage = computed(() => carePackage(packageId.value))
   const latest = computed(() => packageMaxDate(packageId.value))
+  const earliestTime = computed(() => packageMinTime(packageId.value, date.value))
+  const dateHint = computed(() =>
+    packageId.value === 'p1'
+      ? 'แพ็กเกจ 1 เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สามนับจากวันนี้'
+      : 'นัดวันนี้ได้ถ้าเวลาห่างอย่างน้อย 2 ชั่วโมง',
+  )
+  const timeHint = computed(() =>
+    earliestTime.value
+      ? `วันนี้เลือกได้ตั้งแต่ ${earliestTime.value} น. เลื่อนวงล้อได้เฉพาะเวลาที่ยังทัน`
+      : `เลื่อนชั่วโมงและนาทีขึ้นลง แถบสีเขียวคือเวลาที่เลือก ${time.value} น.`,
+  )
   const packageDetail = computed(() => {
     const extra = [
       selectedPackage.value.profession && profession.value !== 'ไม่ระบุ' ? `วิชาชีพ ${profession.value}` : '',
@@ -389,9 +418,11 @@
     ].filter(Boolean)
     return [selectedPackage.value.lead, ...extra].join(' · ')
   })
-  const date = ref(isoOffset(1))
-  const time = ref('09:00')
   const hospitalQuery = ref('')
+  const found = ref<Hospital[]>([])
+  const chosen = ref<Hospital | null>(null)
+  const searching = ref(false)
+  const pinMoved = ref(false)
   const userPoint = ref<LatLng>({ lat: FAMILY.lat, lng: FAMILY.lng })
   const usingDevice = ref(false)
   const locating = ref(false)
@@ -401,6 +432,8 @@
   const needs = ref<NeedId[]>([])
   const caregiverId = ref('')
   let rankTimer = 0
+  let searchTimer = 0
+  let queryGen = 0
 
   const titles = ['ผู้สูงอายุ', 'แพ็กเกจ', 'ไปเมื่อไร', 'ความต้องการ', 'เพื่อนดูแล', 'ยืนยันคำขอ']
   const careNeeds = NEED_OPTIONS.filter(item => item.group === 'care')
@@ -416,23 +449,21 @@
     }),
   )
   const selectedElder = computed(() => store.elders.find(item => item.id === elderId.value))
-  const selectedHospital = computed(() => hospitals.find(item => item.id === hospitalId.value))
-  const nearestHospitals = computed(() => {
-    const query = hospitalQuery.value.trim().toLowerCase()
-    return hospitals
-      .map(hospital => ({ ...hospital, km: distanceKm(userPoint.value, hospital) }))
-      .filter(hospital => {
-        if (!query) return true
-        return `${hospital.name} ${hospital.short} ${hospital.area}`.toLowerCase().includes(query)
-      })
-      .sort((a, b) => a.km - b.km)
+  const selectedHospital = computed(() => chosen.value)
+  const confirmPoint = computed<LatLng | null>(() =>
+    chosen.value ? { lat: chosen.value.lat, lng: chosen.value.lng } : null,
+  )
+  const shownPlaces = computed(() => {
+    if (hospitalQuery.value.trim().length < 2) return []
+    return found.value.map(place => ({ ...place, km: distanceKm(userPoint.value, place) }))
   })
   const locationHint = computed(() => {
-    if (hospitalQuery.value.trim()) return 'ผลการค้นหา ระยะทางวัดจากบ้าน'
-    if (locating.value) return 'กำลังอ่านตำแหน่งจากเครื่อง เพื่อเรียงโรงพยาบาลที่ใกล้บ้าน'
-    if (outsideArea.value) return 'ตำแหน่งนี้อยู่นอกพื้นที่ ใช้จุดที่บันทึกไว้เพื่อเรียงโรงพยาบาลใกล้บ้าน'
-    if (usingDevice.value) return 'เรียงโรงพยาบาลที่ใกล้บ้านจากตำแหน่งของคุณ พิมพ์ชื่อเพื่อค้นหา'
-    return 'เรียงโรงพยาบาลที่ใกล้บ้านจากจุดที่บันทึกไว้ พิมพ์ชื่อเพื่อค้นหา'
+    if (searching.value) return 'กำลังค้นหาจากแผนที่ NOSTRA'
+    if (hospitalQuery.value.trim().length >= 2) return 'เลือกชื่อจากผลการค้นหา แล้วเลื่อนหมุดสีส้มเพื่อยืนยันจุดนัด'
+    if (locating.value) return 'กำลังอ่านตำแหน่งจากเครื่อง เพื่อหาสถานที่ใกล้คุณ'
+    if (outsideArea.value) return 'ตำแหน่งนี้อยู่นอกพื้นที่ ใช้จุดบ้านที่บันทึกไว้เป็นจุดเริ่มค้นหา'
+    if (usingDevice.value) return 'พิมพ์ชื่อสถานที่ที่จะไป ระบบค้นจากแผนที่รอบตำแหน่งของคุณ'
+    return 'พิมพ์ชื่อโรงพยาบาลหรือคลินิกที่จะไป แล้วเลือกจากผลการค้นหา'
   })
   const selectedRank = computed(() => ranked.value.find(item => item.caregiver.id === caregiverId.value))
   const selectedCare = computed(() => selectedRank.value?.caregiver)
@@ -443,6 +474,9 @@
   })
   const rebookNickname = computed(() =>
     rebookSource.value ? caregiverById(rebookSource.value.caregiverId)?.nickname ?? 'เพื่อนดูแล' : '',
+  )
+  const packageChoices = computed(() =>
+    rebookSource.value ? CARE_PACKAGES.filter(item => item.id !== 'p1') : CARE_PACKAGES,
   )
   const shownRanked = computed(() => {
     const available = ranked.value.filter(item => !item.blocked)
@@ -461,11 +495,26 @@
       if (!id) return
       const source = store.trips.find(trip => trip.id === id && trip.owner === 'me')
       if (!source) return
+      if (!canRebookTrip(source)) {
+        router.replace({ name: 'book' })
+        return
+      }
       elderId.value = source.elderId
       packageId.value = source.packageId && carePackage(source.packageId).recurring ? source.packageId : 'p2'
       profession.value = source.profession || PACKAGE_PROFESSIONS[0]
       language.value = source.language || PACKAGE_LANGUAGES[0]
       hospitalId.value = source.hospitalId
+      const placeLabel = tripPlaceName(source)
+      chosen.value = {
+        id: source.hospitalId,
+        name: placeLabel,
+        short: placeLabel,
+        area: '',
+        lat: source.placeLat ?? FAMILY.lat,
+        lng: source.placeLng ?? FAMILY.lng,
+      }
+      hospitalQuery.value = placeLabel
+      pinMoved.value = source.placeLat != null
       department.value = source.department
       needs.value = [...source.needs]
       hospitalTouched.value = true
@@ -492,15 +541,57 @@
     }
   })
 
-  function chooseHospital(id: string) {
+  function choosePlace(place: Hospital) {
     hospitalTouched.value = true
-    hospitalId.value = id
+    pinMoved.value = false
+    chosen.value = { ...place }
+    hospitalId.value = place.id
   }
 
-  function applyNearest() {
-    if (hospitalTouched.value) return
-    const first = nearestHospitals.value[0]
-    if (first) hospitalId.value = first.id
+  function chooseHospital(id: string) {
+    const place = shownPlaces.value.find(item => item.id === id)
+    if (place) choosePlace(place)
+  }
+
+  function movePin(point: LatLng) {
+    hospitalTouched.value = true
+    pinMoved.value = true
+    const base = chosen.value ?? {
+      id: `pin-${Date.now()}`,
+      name: hospitalQuery.value.trim() || 'จุดที่ปักบนแผนที่',
+      short: 'จุดนัด',
+      area: 'ยืนยันจากหมุด',
+      lat: point.lat,
+      lng: point.lng,
+    }
+    chosen.value = { ...base, lat: point.lat, lng: point.lng }
+    hospitalId.value = chosen.value.id
+  }
+
+  async function runSearch(query: string) {
+    const gen = ++queryGen
+    try {
+      const places = await searchPlaces({ keyword: query, lat: userPoint.value.lat, lng: userPoint.value.lng })
+      if (gen !== queryGen || hospitalQuery.value.trim() !== query) return
+      found.value = places
+      searching.value = false
+      if (!places.length && !hospitalTouched.value) {
+        chosen.value = {
+          id: `pin-${query}`,
+          name: query,
+          short: 'จุดนัด',
+          area: 'ปักเองบนแผนที่',
+          lat: userPoint.value.lat,
+          lng: userPoint.value.lng,
+        }
+        hospitalId.value = chosen.value.id
+        hospitalTouched.value = true
+      }
+    } catch {
+      if (gen !== queryGen) return
+      found.value = []
+      searching.value = false
+    }
   }
 
   function locate() {
@@ -513,26 +604,38 @@
         if (!inServiceArea(here)) {
           outsideArea.value = true
           usingDevice.value = false
-          applyNearest()
           return
         }
         outsideArea.value = false
         usingDevice.value = true
         userPoint.value = here
-        applyNearest()
       },
       () => {
         locating.value = false
         usingDevice.value = false
-        applyNearest()
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 },
     )
   }
 
+  watch(hospitalQuery, value => {
+    window.clearTimeout(searchTimer)
+    const query = value.trim()
+    if (query.length < 2) {
+      found.value = []
+      searching.value = false
+      return
+    }
+    searching.value = true
+    searchTimer = window.setTimeout(() => void runSearch(query), 400)
+  })
+
   onMounted(() => {
-    applyNearest()
     locate()
+  })
+
+  onBeforeUnmount(() => {
+    window.clearTimeout(searchTimer)
   })
 
   function toggleNeed(id: NeedId) {
@@ -571,9 +674,25 @@
     draft.mobility = ''
   }
 
-  watch(packageId, () => {
-    if (date.value < earliest) date.value = earliest
-    if (date.value > latest.value) date.value = latest.value
+  function selectPackage(id: CarePackageId) {
+    packageId.value = id
+    date.value = id === 'p1' ? packageMinDate('p1') : isoOffset(0)
+  }
+
+  function chooseDate(value: unknown) {
+    if (value instanceof Date) {
+      const pad = (part: number) => String(part).padStart(2, '0')
+      date.value = `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+    } else if (typeof value === 'string' && value) {
+      date.value = value.slice(0, 10)
+    }
+    dateMenu.value = false
+  }
+
+  watch([packageId, date], () => {
+    if (date.value < earliest.value) date.value = earliest.value
+    else if (date.value > latest.value) date.value = latest.value
+    else if (earliestTime.value && time.value < earliestTime.value) time.value = earliestTime.value
   })
 
   function back() {
@@ -588,14 +707,18 @@
       return
     }
     if (step.value === 3) {
-      if (!hospitalId.value || !date.value || !time.value) {
-        error.value = 'เลือกสถานพยาบาล วันที่ และเวลา'
+      if (!chosen.value || !date.value || !time.value) {
+        error.value = 'เลือกสถานพยาบาลหรือปักหมุด แล้วเลือกวันที่และเวลา'
         return
       }
-      if (date.value < earliest || date.value > latest.value) {
+      if (date.value < earliest.value || date.value > latest.value) {
         error.value = selectedPackage.value.id === 'p1'
-          ? 'แพ็กเกจ 1 จองล่วงหน้าได้ไม่เกิน 3 วัน'
-          : 'แพ็กเกจนี้จองล่วงหน้าได้ไม่เกิน 2 เดือน'
+          ? 'แพ็กเกจ 1 เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สามนับจากวันนี้'
+          : 'เวลานัดต้องห่างจากตอนนี้อย่างน้อย 2 ชั่วโมง'
+        return
+      }
+      if (earliestTime.value && time.value < earliestTime.value) {
+        error.value = 'เวลานัดต้องห่างจากตอนนี้อย่างน้อย 2 ชั่วโมง'
         return
       }
     }
@@ -634,6 +757,8 @@
       needs: [...needs.value],
       note: note.value.trim(),
       pickup: selectedHospital.value?.name ?? '',
+      placeLat: selectedHospital.value?.lat,
+      placeLng: selectedHospital.value?.lng,
       caregiverId: rankedCare.caregiver.id,
       price: selectedPackage.value.price,
       repeatOf:
@@ -648,10 +773,6 @@
 </script>
 
 <style scoped>
-  .package-points {
-    padding-left: 1.2rem;
-  }
-
   .hospital-row {
     display: flex;
     align-items: center;

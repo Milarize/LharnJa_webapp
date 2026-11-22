@@ -1,5 +1,5 @@
 import type { Caregiver, Elder, Hospital, Trip } from '@/domain/types'
-import { FAMILY, hoursAgo, isoOffset, quote, statusFlow } from '@/domain/model'
+import { carePackage, FAMILY, hoursAgo, isoOffset, statusFlow } from '@/domain/model'
 
 export const hospitals: Hospital[] = [
   { id: 'siriraj', name: 'โรงพยาบาลศิริราช', short: 'ศิริราช', area: 'บางกอกน้อย', lat: 13.7578, lng: 100.4857 },
@@ -22,9 +22,9 @@ export const caregivers: Caregiver[] = [
     years: 6,
     rating: 4.9,
     reviews: 128,
-    bio: 'ดูแลผู้สูงอายุมา 6 ปี ถนัดการรอคิวในโรงพยาบาลรัฐ และคุ้นทางศิริราชกับรามาธิบดี',
-    hospitalIds: ['siriraj', 'rama'],
-    skills: ['cane', 'wheelchair', 'memory', 'meds', 'hearing'],
+    bio: 'ดูแลผู้สูงอายุมา 6 ปี ถนัดการรอคิวในโรงพยาบาลรัฐ และคุ้นทางศิริราช รามาธิบดี และราชวิถี',
+    hospitalIds: ['siriraj', 'rama', 'rajavithi'],
+    skills: ['cane', 'wheelchair', 'transfer', 'memory', 'meds', 'hearing'],
     languages: ['ไทย'],
     distanceKm: 2.4,
     zone: 'ลาดพร้าว',
@@ -146,6 +146,10 @@ export function hospitalById(id: string) {
   return hospitals.find(item => item.id === id)
 }
 
+export function tripPlaceName(trip: { hospitalId: string, pickup?: string }, fallback = 'สถานพยาบาล') {
+  return hospitalById(trip.hospitalId)?.short || trip.pickup || fallback
+}
+
 export function caregiverById(id: string) {
   return caregivers.find(item => item.id === id)
 }
@@ -176,8 +180,18 @@ export function createSeed() {
 
   const tomorrow = isoOffset(1)
   const lastWeek = isoOffset(-6)
-  const doneFlow = statusFlow('full')
-  const doneTimes = ['07:40', '08:05', '08:40', '09:10', '09:35', '11:20', '12:05']
+  const twoWeeksAgo = isoOffset(-13)
+  const plusFlow = statusFlow('full', 'p2')
+  const basicFlow = statusFlow('full', 'p1')
+  const listeningFlow = plusFlow.filter(status => status !== 'completed')
+  const plusTimes = ['07:40', '08:05', '08:40', '09:10', '09:35', '11:20', '12:05']
+  const listeningTimes = ['07:40', '08:05', '08:40', '09:10', '09:35', '10:20']
+  const basicTimes = ['08:10', '08:25', '08:50', '09:20', '10:05', '11:40']
+  const siriraj = hospitalById('siriraj')!
+  const rama = hospitalById('rama')!
+  const rajavithi = hospitalById('rajavithi')!
+  const chula = hospitalById('chula')!
+  const today = isoOffset(0)
 
   const trips: Trip[] = [
     {
@@ -190,19 +204,22 @@ export function createSeed() {
       elderNote: 'ความดัน เบาหวาน แพ้ยาซัลฟา · เดินได้ช้า ใช้ไม้เท้า',
       hospitalId: 'siriraj',
       department: 'อายุรกรรม',
-      date: tomorrow,
+      date: today,
       time: '09:00',
       serviceType: 'full',
-      needs: ['cane', 'meds', 'updates'],
+      packageId: 'p2',
+      needs: ['cane', 'meds'],
       note: 'อย่าให้คุณยายรอแดดนาน และต้องบอกเจ้าหน้าที่เรื่องแพ้ยาซัลฟาก่อนรับยา',
       pickup: FAMILY.pickup,
+      placeLat: siriraj.lat,
+      placeLng: siriraj.lng,
       caregiverId: 'cg-ann',
-      status: 'confirmed',
-      price: quote('full', 1).total,
-      timeline: [
-        { status: 'requested', at: hoursAgo(20) },
-        { status: 'confirmed', at: hoursAgo(3) },
-      ],
+      status: 'with_doctor',
+      price: carePackage('p2').price,
+      timeline: listeningFlow.map((status, index) => ({
+        status,
+        at: new Date(`${today}T${listeningTimes[index]}:00`).toISOString(),
+      })),
     },
     {
       id: 'trip-prasert-done',
@@ -217,12 +234,15 @@ export function createSeed() {
       date: lastWeek,
       time: '09:30',
       serviceType: 'full',
+      packageId: 'p2',
       needs: ['hearing', 'cane'],
       note: 'คุณตาต้องให้พูดช้า ๆ และหันหน้ามาทางเขา',
       pickup: FAMILY.pickup,
+      placeLat: rama.lat,
+      placeLng: rama.lng,
       caregiverId: 'cg-ann',
       status: 'completed',
-      price: quote('full', 1).total,
+      price: carePackage('p2').price,
       review: 'พี่แอนไม่เร่งคุณตา อธิบายระหว่างรอคิวจนคุณตาไม่กังวล',
       visitNote: {
         doctorSaid: 'คุณตามีต้อกระจกข้างขวา แพทย์ให้นัดผ่าตัด และไม่ได้ให้ยาใหม่',
@@ -231,10 +251,40 @@ export function createSeed() {
         caution: 'ห้ามถูกตาข้างขวา และอย่าให้คุณตาขับรถ',
         sentAt: hoursAgo(20),
         sentTo: ['rel-napa'],
+        shareBasis: ['consent'],
+        tier: 'standard',
       },
-      timeline: doneFlow.map((status, index) => ({
+      timeline: plusFlow.map((status, index) => ({
         status,
-        at: new Date(`${lastWeek}T${doneTimes[index]}:00`).toISOString(),
+        at: new Date(`${lastWeek}T${plusTimes[index]}:00`).toISOString(),
+      })),
+    },
+    {
+      id: 'trip-somsri-basic-done',
+      owner: 'me',
+      familyName: FAMILY.displayName,
+      elderId: 'elder-somsri',
+      elderName: 'คุณยายสมศรี วงศ์สุข',
+      elderAge: 78,
+      elderNote: 'ความดัน เบาหวาน แพ้ยาซัลฟา · เดินได้ช้า ใช้ไม้เท้า',
+      hospitalId: 'chula',
+      department: 'ตรวจสุขภาพ',
+      date: twoWeeksAgo,
+      time: '10:00',
+      serviceType: 'full',
+      packageId: 'p1',
+      needs: ['cane'],
+      note: 'นัดตรวจเลือดเช้า ขอคนเดินช้า ๆ พอ',
+      pickup: FAMILY.pickup,
+      placeLat: chula.lat,
+      placeLng: chula.lng,
+      caregiverId: 'cg-wichai',
+      status: 'completed',
+      price: carePackage('p1').price,
+      review: 'พี่วิชัยพาไปตรงเวลา พูดสุภาพ',
+      timeline: basicFlow.map((status, index) => ({
+        status,
+        at: new Date(`${twoWeeksAgo}T${basicTimes[index]}:00`).toISOString(),
       })),
     },
     {
@@ -250,12 +300,15 @@ export function createSeed() {
       date: tomorrow,
       time: '14:30',
       serviceType: 'full',
+      packageId: 'p2',
       needs: ['wheelchair', 'transfer'],
       note: 'คุณลุงตัวใหญ่ ต้องการคนช่วยพยุงตอนขึ้นรถและตอนเดินเข้าแผนก',
       pickup: '22 ซอยราชวิถี 7 เขตราชเทวี กรุงเทพฯ',
+      placeLat: rajavithi.lat,
+      placeLng: rajavithi.lng,
       caregiverId: 'cg-ann',
       status: 'requested',
-      price: quote('full', 1).total,
+      price: carePackage('p2').price,
       timeline: [{ status: 'requested', at: hoursAgo(0.5) }],
     },
   ]

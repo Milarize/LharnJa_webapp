@@ -93,7 +93,9 @@
     () => route.name,
     name => {
       if (name === 'caregiver') store.role = 'caregiver'
-      if (name === 'home' || name === 'book' || name === 'trips' || name === 'plans') store.role = 'family'
+      if (name === 'home' || name === 'book' || name === 'trips' || name === 'history' || name === 'plans') {
+        store.role = 'family'
+      }
     },
     { immediate: true },
   )

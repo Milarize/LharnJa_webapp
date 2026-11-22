@@ -6,6 +6,9 @@ interface ImportMetaEnv {
 
 interface NostraMarker {
   onClick?: () => void
+  onDragStart?: (point: { lat: number, lon: number }) => void
+  onDragMove?: (point: { lat: number, lon: number }) => void
+  onDragEnd?: (point: { lat: number, lon: number }) => void
 }
 
 interface NostraGraphicsLayer {
@@ -35,7 +38,7 @@ interface NostraApi {
       GraphicsLayer: new (map: NostraMap, options: { id: string, mouseOver?: boolean }) => NostraGraphicsLayer
     }
     symbols: {
-      Marker: new (options: { url: string, width: number, height: number }) => NostraMarker
+      Marker: new (options: { url: string, width: number, height: number, draggable?: boolean }) => NostraMarker
     }
   }
 }
