@@ -39,17 +39,9 @@
                   prepend-icon="mdi-phone"
                   size="small"
                   variant="outlined"
-                  @click="contact(item.caregiver?.nickname ?? 'ผู้ดูแล', 'โทร')"
+                  @click="contact(item.caregiver?.nickname ?? 'ผู้ดูแล')"
                 >
                   โทร
-                </v-btn>
-                <v-btn
-                  prepend-icon="mdi-chat"
-                  size="small"
-                  variant="outlined"
-                  @click="contact(item.caregiver?.nickname ?? 'ผู้ดูแล', 'ส่งข้อความ')"
-                >
-                  ข้อความ
                 </v-btn>
                 <v-btn
                   v-if="item.rebookFrom"
@@ -112,17 +104,9 @@
               prepend-icon="mdi-phone"
               size="small"
               variant="tonal"
-              @click="contact(caregiverName(trip.caregiverId), 'โทร')"
+              @click="contact(caregiverName(trip.caregiverId))"
             >
               โทรหา{{ caregiverName(trip.caregiverId) }}
-            </v-btn>
-            <v-btn
-              prepend-icon="mdi-chat"
-              size="small"
-              variant="tonal"
-              @click="contact(caregiverName(trip.caregiverId), 'ส่งข้อความ')"
-            >
-              ข้อความ
             </v-btn>
             <v-btn
               v-if="canRebookTrip(trip)"
@@ -195,12 +179,7 @@
     router.push({ name: 'trip', params: { id } })
   }
 
-  function contact(nickname: string, action: string) {
-    store.notify(
-      action === 'โทร'
-        ? `ต้นแบบยังไม่โทรออก ในของจริงจะโทรหา${nickname}ผ่านช่องทางที่ยืนยันตัวตนแล้ว`
-        : `ต้นแบบยังไม่ส่งข้อความ ในของจริงจะคุยกับ${nickname}ผ่านช่องทางที่ยืนยันตัวตนแล้ว`,
-      false,
-    )
+  function contact(nickname: string) {
+    store.notify(`ต้นแบบยังไม่โทรออก ในของจริงจะโทรหา${nickname}ผ่านช่องทางที่ยืนยันตัวตนแล้ว`, false)
   }
 </script>

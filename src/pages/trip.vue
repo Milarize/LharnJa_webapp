@@ -90,7 +90,6 @@
           <p class="text-body-medium mb-3">{{ caregiver?.bio }}</p>
           <div class="d-flex flex-wrap ga-2">
             <v-btn prepend-icon="mdi-phone" variant="outlined" @click="fake('โทร')">โทร</v-btn>
-            <v-btn prepend-icon="mdi-chat" variant="outlined" @click="fake('ส่งข้อความ')">ข้อความ</v-btn>
             <v-btn
               v-if="trip.owner === 'me' && canRebookTrip(trip)"
               color="primary"
