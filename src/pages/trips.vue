@@ -16,7 +16,7 @@
     <div v-if="past.length" class="d-flex flex-column ga-3">
       <TripCard v-for="trip in past" :key="trip.id" :trip="trip">
         <v-btn
-          v-if="trip.status === 'completed'"
+          v-if="trip.status === 'completed' && trip.packageId !== 'p1'"
           class="mt-3"
           color="primary"
           prepend-icon="mdi-calendar-sync"

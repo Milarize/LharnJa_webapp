@@ -52,31 +52,16 @@
 
     <div v-else-if="step === 2">
       <p class="text-body-medium text-medium-emphasis mb-4">
-        เติมแพ็กเกจต่อการจองครั้งนี้ ไม่มีการสมัครรายเดือน ผู้ดูแลไปพบที่โรงพยาบาลแล้วอยู่ดูแลระหว่างพบแพทย์
+        เลือกการดูแลครั้งนี้ จ่ายตอนจองครั้งเดียว
       </p>
       <v-row>
-        <v-col v-for="item in CARE_PACKAGES" :key="item.id" cols="12">
-          <v-card
-            class="pa-4"
-            :color="packageId === item.id ? 'primary' : undefined"
-            role="button"
-            rounded="md"
-            tabindex="0"
-            :variant="packageId === item.id ? 'tonal' : 'outlined'"
-            @click="selectPackage(item.id)"
-            @keydown.enter="selectPackage(item.id)"
-          >
-            <div class="d-flex justify-space-between align-start ga-3">
-              <div>
-                <div class="text-title-medium font-weight-medium">{{ item.name }}</div>
-                <div class="text-body-small text-medium-emphasis">{{ item.lead }}</div>
-              </div>
-              <div class="text-title-medium font-weight-bold">{{ baht(item.price) }}</div>
-            </div>
-            <ul class="package-points mt-3 mb-0">
-              <li v-for="point in item.points" :key="point">{{ point }}</li>
-            </ul>
-          </v-card>
+        <v-col v-for="item in packageChoices" :key="item.id" cols="12">
+          <PackageChoice
+            :item="item"
+            selectable
+            :selected="packageId === item.id"
+            @select="selectPackage"
+          />
         </v-col>
       </v-row>
       <div v-if="selectedPackage.profession" class="d-flex flex-column ga-4 mt-5">
@@ -364,6 +349,7 @@
   import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import PlaceMap from '@/components/PlaceMap.vue'
+  import PackageChoice from '@/components/PackageChoice.vue'
   import TimeWheel from '@/components/TimeWheel.vue'
   import type { CarePackageId, Hospital, NeedId } from '@/domain/types'
   import { caregiverById, hospitals } from '@/domain/data'
@@ -414,7 +400,7 @@
   const dateHint = computed(() =>
     packageId.value === 'p1'
       ? 'แพ็กเกจ 1 เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สามนับจากวันนี้'
-      : 'นัดวันนี้ได้ถ้าเวลาห่างอย่างน้อย 2 ชั่วโมง และเลือกวันล่วงหน้าได้ 2 เดือน',
+      : 'นัดวันนี้ได้ถ้าเวลาห่างอย่างน้อย 2 ชั่วโมง',
   )
   const timeHint = computed(() =>
     earliestTime.value
@@ -488,6 +474,9 @@
   })
   const rebookNickname = computed(() =>
     rebookSource.value ? caregiverById(rebookSource.value.caregiverId)?.nickname ?? 'เพื่อนดูแล' : '',
+  )
+  const packageChoices = computed(() =>
+    rebookSource.value ? CARE_PACKAGES.filter(item => item.id !== 'p1') : CARE_PACKAGES,
   )
   const shownRanked = computed(() => {
     const available = ranked.value.filter(item => !item.blocked)
@@ -758,7 +747,7 @@
       if (date.value < earliest.value || date.value > latest.value) {
         error.value = selectedPackage.value.id === 'p1'
           ? 'แพ็กเกจ 1 เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สามนับจากวันนี้'
-          : 'แพ็กเกจนี้จองล่วงหน้าได้ไม่เกิน 2 เดือน'
+          : 'เวลานัดต้องห่างจากตอนนี้อย่างน้อย 2 ชั่วโมง'
         return
       }
       if (earliestTime.value && time.value < earliestTime.value) {
@@ -817,10 +806,6 @@
 </script>
 
 <style scoped>
-  .package-points {
-    padding-left: 1.2rem;
-  }
-
   .hospital-row {
     display: flex;
     align-items: center;
