@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import type { Elder, ProviderTier, Role, Trip, TripStatus, VisitNote } from '@/domain/types'
 import { caregiverById, createSeed, tripPlaceName } from '@/domain/data'
 import { rankCaregivers } from '@/domain/match'
-import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, initialFromName, nextStatus, noteGaps, noteMessage, PROVIDER_TIERS, RESPOND_MS, SEED_RESPOND_MS, statusLabel, uid } from '@/domain/model'
+import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, initialFromName, nextStatus, noteGaps, noteMessage, packageHasNotes, PROVIDER_TIERS, RESPOND_MS, SEED_RESPOND_MS, statusLabel, uid } from '@/domain/model'
 
 const STORAGE_KEY = 'care-companion-v1'
 
@@ -267,14 +267,14 @@ export const useCareStore = defineStore('care', () => {
   function advanceTrip(id: string) {
     const trip = trips.value.find(item => item.id === id)
     if (!trip) return
-    const next = nextStatus(trip.status, trip.serviceType)
+    const next = nextStatus(trip.status, trip.serviceType, trip.packageId)
     if (!next) return
     const nickname = caregiverById(trip.caregiverId)?.nickname ?? 'ผู้ดูแล'
     const place = tripPlaceName(trip)
-    if (next === 'completed' && !trip.visitNote?.sentAt) {
+    if (next === 'completed' && packageHasNotes(trip.packageId) && !trip.visitNote?.sentAt) {
       const sent = sendVisitNote(id, trip.visitNote?.sentTo ?? [])
       if (!sent) {
-        notify('จดโน้ตให้ครบ เลือกฐานการรับข้อมูลและผู้รับ แล้วค่อยจบงาน')
+        notify('เลือกข้อความสรุปให้ครบ เลือกผู้รับ แล้วค่อยจบงาน')
         return
       }
     }
@@ -297,7 +297,7 @@ export const useCareStore = defineStore('care', () => {
   function verifyThaid(id: string) {
     if (!thaidIds.value.includes(id)) thaidIds.value = [...thaidIds.value, id]
     const name = FAMILY_MEMBERS.find(person => person.id === id)?.name ?? 'สมาชิก'
-    notify(`ยืนยันตัวตน${name}ด้วย ThaiD แล้ว`)
+    notify(`ยืนยันตัวตน${name}ด้วย ThaID แล้ว`)
   }
 
   function saveVisitNote(id: string, note: VisitNote) {

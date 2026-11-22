@@ -55,6 +55,7 @@
             <div class="quick">
               <button type="button" @click="enter('book')">เปิดหน้าจอง</button>
               <button type="button" @click="enter('trips')">ดูนัดที่กำลังจะถึง</button>
+              <button type="button" @click="enter('history')">ดูประวัติ</button>
               <button type="button" @click="enter('plans')">ดูแพ็กเกจ</button>
             </div>
           </div>
@@ -67,6 +68,10 @@
             <button type="button" @click="enter('trips')">
               <v-icon color="primary" icon="mdi-clipboard-text-outline" />
               <span>นัดของฉัน</span>
+            </button>
+            <button type="button" @click="enter('history')">
+              <v-icon color="primary" icon="mdi-history" />
+              <span>ประวัติ</span>
             </button>
             <button type="button" @click="enter('plans')">
               <v-icon color="primary" icon="mdi-star-circle-outline" />
@@ -106,7 +111,7 @@
   const booker = FAMILY_MEMBERS.find(person => person.id === FAMILY.memberId) ?? FAMILY_MEMBERS[0]
   const verified = computed(() => (booker ? store.isVerified(booker.id) : false))
   const providerVerified = computed(() => store.isVerified(PROVIDER_THAID.id))
-  const pendingEnter = ref<'home' | 'book' | 'trips' | 'plans' | null>(null)
+  const pendingEnter = ref<'home' | 'book' | 'trips' | 'history' | 'plans' | null>(null)
   const tab = ref<'user' | 'provider'>('user')
   const chat = ref<HTMLElement | null>(null)
   const now = ref(new Date())
@@ -163,7 +168,7 @@
 
   onUnmounted(() => window.clearInterval(timer))
 
-  function enter(name: 'home' | 'book' | 'trips' | 'plans') {
+  function enter(name: 'home' | 'book' | 'trips' | 'history' | 'plans') {
     store.role = 'family'
     if (!verified.value) {
       pendingEnter.value = name

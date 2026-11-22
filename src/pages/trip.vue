@@ -92,7 +92,7 @@
             <v-btn prepend-icon="mdi-phone" variant="outlined" @click="fake('โทร')">โทร</v-btn>
             <v-btn prepend-icon="mdi-chat" variant="outlined" @click="fake('ส่งข้อความ')">ข้อความ</v-btn>
             <v-btn
-              v-if="trip.owner === 'me' && trip.status === 'completed' && trip.packageId !== 'p1'"
+              v-if="trip.owner === 'me' && canRebookTrip(trip)"
               color="primary"
               prepend-icon="mdi-calendar-sync"
               :to="{ name: 'book', query: { rebook: trip.id } }"
@@ -114,7 +114,13 @@
           </div>
         </v-card>
 
-        <div v-if="store.role === 'caregiver' && viewStatus(trip.status, trip.serviceType) === 'with_doctor'" class="mt-4">
+        <div
+          v-if="store.role === 'caregiver' && packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor'"
+          class="mt-4"
+        >
+          <p class="text-body-medium text-medium-emphasis mb-3">
+            ถึงขั้นช่วยฟังหมอแล้ว สรุปให้นัดนี้ที่นี่ แล้วค่อยจบงาน
+          </p>
           <FamilyNote :trip="trip" />
         </div>
       </v-col>
@@ -173,7 +179,9 @@
     carePackage,
     dayLabel,
     needLabel,
+    canRebookTrip,
     nextActionLabel,
+    packageHasNotes,
     SERVICES,
     statusFlow,
     statusLabel,
@@ -204,12 +212,14 @@
     }
   })
   const caregiver = computed(() => (trip.value ? caregiverById(trip.value.caregiverId) : undefined))
-  const flow = computed(() => (trip.value ? statusFlow(trip.value.serviceType) : []))
+  const flow = computed(() => (trip.value ? statusFlow(trip.value.serviceType, trip.value.packageId) : []))
   const currentIndex = computed(() =>
     trip.value ? flow.value.indexOf(viewStatus(trip.value.status, trip.value.serviceType)) : -1,
   )
   const nextLabel = computed(() =>
-    trip.value && trip.value.status !== 'requested' ? nextActionLabel(trip.value.status, trip.value.serviceType) : null,
+    trip.value && trip.value.status !== 'requested'
+      ? nextActionLabel(trip.value.status, trip.value.serviceType, trip.value.packageId)
+      : null,
   )
   const remain = computed(() => remainText(trip.value?.respondBy, store.clock))
 

@@ -361,6 +361,7 @@
     appointmentDate,
     baht,
     CARE_PACKAGES,
+    canRebookTrip,
     carePackage,
     dayLabel,
     DEPARTMENTS,
@@ -495,6 +496,10 @@
       if (!id) return
       const source = store.trips.find(trip => trip.id === id && trip.owner === 'me')
       if (!source) return
+      if (!canRebookTrip(source)) {
+        router.replace({ name: 'book' })
+        return
+      }
       elderId.value = source.elderId
       packageId.value = source.packageId && carePackage(source.packageId).recurring ? source.packageId : 'p2'
       profession.value = source.profession || PACKAGE_PROFESSIONS[0]

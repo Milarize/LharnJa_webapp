@@ -12,7 +12,7 @@
     <v-card class="pa-5 mb-6" color="primary" rounded="md">
       <div class="d-flex align-center ga-2 mb-3">
         <v-icon icon="mdi-shield-check" size="18" />
-        <span class="text-label-large">ยืนยันตัวตนด้วย ThaiD แล้ว</span>
+        <span class="text-label-large">ยืนยันตัวตนด้วย ThaID แล้ว</span>
       </div>
       <div class="d-flex align-center ga-3">
         <v-avatar size="72">
@@ -41,9 +41,9 @@
           <StatusChip class="mt-2" :service="trip.serviceType" :status="trip.status" />
           <div v-if="trip.status !== 'requested'" class="schedule-steps">
             <span
-              v-for="step in visitSteps"
+              v-for="step in stepsFor(trip)"
               :key="step"
-              :class="{ 'is-done': stepIndex(trip) > visitSteps.indexOf(step), 'is-now': stepIndex(trip) === visitSteps.indexOf(step) }"
+              :class="{ 'is-done': stepIndex(trip) > stepsFor(trip).indexOf(step), 'is-now': stepIndex(trip) === stepsFor(trip).indexOf(step) }"
             >
               {{ statusLabel(step, trip.serviceType) }}
             </span>
@@ -84,33 +84,45 @@
     <h2 class="text-title-large font-weight-medium mb-3">งานที่รับแล้ว</h2>
     <div v-if="active.length" class="d-flex flex-column ga-3 mb-8">
       <TripCard v-for="trip in active" :key="trip.id" audience="caregiver" :trip="trip">
-        <v-btn
-          v-if="nextActionLabel(trip.status, trip.serviceType)"
-          class="mt-4"
-          color="primary"
-          @click.stop="store.advanceTrip(trip.id)"
-        >
-          {{ nextActionLabel(trip.status, trip.serviceType) }}
-        </v-btn>
+        <div class="d-flex flex-wrap ga-2 mt-4">
+          <v-btn
+            v-if="needsSummary(trip)"
+            color="primary"
+            :to="{ name: 'trip', params: { id: trip.id } }"
+            @click.stop
+          >
+            ไปสรุปให้ลูกหลาน
+          </v-btn>
+          <v-btn
+            v-else-if="nextActionLabel(trip.status, trip.serviceType, trip.packageId)"
+            color="primary"
+            @click.stop="store.advanceTrip(trip.id)"
+          >
+            {{ nextActionLabel(trip.status, trip.serviceType, trip.packageId) }}
+          </v-btn>
+          <v-btn
+            v-if="needsSummary(trip) && trip.visitNote?.sentAt"
+            color="primary"
+            variant="tonal"
+            @click.stop="store.advanceTrip(trip.id)"
+          >
+            จบงานและส่งสรุป
+          </v-btn>
+        </div>
       </TripCard>
     </div>
     <p v-else class="text-body-medium text-medium-emphasis mb-8">ยังไม่มีงานที่รับไว้</p>
-
-    <div v-if="listening.length" class="d-flex flex-column ga-4">
-      <FamilyNote v-for="trip in listening" :key="trip.id" :trip="trip" />
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed } from 'vue'
   import TripCard from '@/components/TripCard.vue'
-  import FamilyNote from '@/components/FamilyNote.vue'
   import StatusChip from '@/components/StatusChip.vue'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
   import { caregiverById, tripPlaceName } from '@/domain/data'
   import type { Trip } from '@/domain/types'
-  import { dayLabel, isOpenStatus, nextActionLabel, PROVIDER_THAID, PROVIDER_TIERS, remainText, SELF_CAREGIVER_ID, statusFlow, statusLabel, tripStamp, viewStatus } from '@/domain/model'
+  import { dayLabel, isOpenStatus, nextActionLabel, packageHasNotes, PROVIDER_THAID, remainText, SELF_CAREGIVER_ID, statusFlow, statusLabel, tripStamp, viewStatus } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
   const store = useCareStore()
@@ -122,16 +134,22 @@
       .filter(trip => isOpenStatus(trip.status) && trip.status !== 'requested')
       .sort((a, b) => tripStamp(a).localeCompare(tripStamp(b))),
   )
-  const listening = computed(() => active.value.filter(trip => viewStatus(trip.status, trip.serviceType) === 'with_doctor'))
   const schedule = computed(() =>
     mine.value
       .filter(trip => trip.status !== 'cancelled')
       .sort((a, b) => tripStamp(a).localeCompare(tripStamp(b))),
   )
-  const visitSteps = statusFlow('full').filter(step => step !== 'requested')
+
+  function stepsFor(trip: Trip) {
+    return statusFlow(trip.serviceType, trip.packageId).filter(step => step !== 'requested')
+  }
 
   function stepIndex(trip: Trip) {
-    return visitSteps.indexOf(viewStatus(trip.status, trip.serviceType))
+    return stepsFor(trip).indexOf(viewStatus(trip.status, trip.serviceType))
+  }
+
+  function needsSummary(trip: Trip) {
+    return packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor'
   }
 </script>
 

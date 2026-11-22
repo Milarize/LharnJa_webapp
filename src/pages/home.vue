@@ -6,7 +6,7 @@
       <template #prepend>
         <img alt="" class="thaid-mark" src="/thaid.png" />
       </template>
-      ยืนยัน ThaiD ครั้งแรกแล้ว
+      ยืนยัน ThaID ครั้งแรกแล้ว
     </v-chip>
     <p v-else class="text-body-medium mb-3">ยืนยันตัวตนครั้งแรกจากหน้า LINE แล้วครั้งถัดไปไม่ต้องทำอีก</p>
     <p class="text-body-large text-medium-emphasis mb-6">
@@ -67,7 +67,7 @@
               <v-btn
                 color="primary"
                 prepend-icon="mdi-calendar-sync"
-                :to="{ name: 'book', query: { rebook: item.latest.id } }"
+                :to="{ name: 'book', query: { rebook: item.rebookFrom?.id ?? item.latest.id } }"
               >
                 จองซ้ำกับ{{ item.caregiver?.nickname }}
               </v-btn>
@@ -83,6 +83,9 @@
       </v-btn>
       <v-btn prepend-icon="mdi-clipboard-text-outline" size="large" variant="outlined" :to="{ name: 'trips' }">
         นัดทั้งหมด
+      </v-btn>
+      <v-btn prepend-icon="mdi-history" size="large" variant="outlined" :to="{ name: 'history' }">
+        ประวัติ
       </v-btn>
     </div>
 

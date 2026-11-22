@@ -45,6 +45,7 @@ export const CARE_PACKAGES: {
   lead: string
   points: string[]
   recurring: boolean
+  notes: boolean
   profession: boolean
   language: boolean
 }[] = [
@@ -53,8 +54,9 @@ export const CARE_PACKAGES: {
     name: 'Basic',
     price: 1090,
     lead: 'ไปด้วยกัน',
-    points: ['มีเพื่อนดูแลไปด้วยตลอดนัด', 'ไม่บันทึกและไม่ติดตามสถานะ', 'เลือกวันนัดได้ 3 วัน เริ่มวันที่สามจากวันนี้'],
+    points: ['มีเพื่อนดูแลไปด้วยตลอดนัด', 'ไม่ช่วยฟังหมอและไม่ส่งสรุปให้ลูกหลาน', 'นัดล่วงหน้า 3 วัน'],
     recurring: false,
+    notes: false,
     profession: false,
     language: false,
   },
@@ -63,8 +65,15 @@ export const CARE_PACKAGES: {
     name: 'Plus',
     price: 1490,
     lead: 'ไปฟังหมอแทน',
-    points: ['มีประกันรายวัน เหมา 8 ชั่วโมง', 'บันทึกให้และช่วยฟังในห้องตรวจ', 'จองคนเดิมซ้ำได้', 'นัดวันนี้ได้ ถ้าเหลือเวลาอย่างน้อย 2 ชั่วโมง'],
+    points: [
+      'มีประกันอุบัติเหตุรายวันระหว่างไปพบแพทย์',
+      'ดูแลใกล้ชิดตลอดนัด 8 ชั่วโมง',
+      'ช่วยฟังหมอ แล้วสรุปส่งให้ลูกหลาน',
+      'จองคนเดิมซ้ำได้',
+      'นัดล่วงหน้าได้ 2 ชั่วโมง',
+    ],
     recurring: true,
+    notes: true,
     profession: false,
     language: false,
   },
@@ -74,12 +83,16 @@ export const CARE_PACKAGES: {
     price: 2790,
     lead: 'ดูแลจากผู้เชี่ยวชาญ',
     points: [
-      'ได้ทุกอย่างในแบบไปฟังหมอแทน',
+      'มีประกันอุบัติเหตุรายวันระหว่างไปพบแพทย์',
+      'ดูแลใกล้ชิดตลอดนัด 8 ชั่วโมง',
+      'ช่วยฟังหมอ แล้วสรุปส่งให้ลูกหลาน',
+      'จองคนเดิมซ้ำได้',
       'เลือกวิชาชีพของผู้ดูแลได้',
       'เลือกภาษาที่ใช้คุยได้',
-      'นัดวันนี้ได้ ถ้าเหลือเวลาอย่างน้อย 2 ชั่วโมง',
+      'นัดล่วงหน้าได้ 2 ชั่วโมง',
     ],
     recurring: true,
+    notes: true,
     profession: true,
     language: true,
   },
@@ -90,6 +103,11 @@ export const PACKAGE_LANGUAGES = ['ไทย', 'อังกฤษ', 'จีน'
 
 export function carePackage(id: CarePackageId) {
   return CARE_PACKAGES.find(item => item.id === id) ?? CARE_PACKAGES[0]
+}
+
+export function packageHasNotes(id?: CarePackageId) {
+  if (!id) return true
+  return carePackage(id).notes
 }
 
 function formatIso(date: Date) {
@@ -420,8 +438,19 @@ export function tripStamp(trip: Pick<Trip, 'date' | 'time'>) {
   return `${trip.date}T${trip.time}`
 }
 
-export function repeatCompanions(trips: Trip[]) {
-  const done = trips.filter(trip => trip.owner === 'me' && trip.status === 'completed')
+export function packageAllowsRebook(id?: CarePackageId) {
+  return Boolean(id && carePackage(id).recurring)
+}
+
+export function canRebookTrip(trip: Pick<Trip, 'status' | 'packageId'>) {
+  return trip.status === 'completed' && packageAllowsRebook(trip.packageId)
+}
+
+function groupCompanions(trips: Trip[], onlyRebookable: boolean) {
+  const done = trips.filter(trip => {
+    if (trip.owner !== 'me' || trip.status !== 'completed') return false
+    return onlyRebookable ? packageAllowsRebook(trip.packageId) : true
+  })
   const grouped = new Map<string, Trip[]>()
   for (const trip of done) {
     const list = grouped.get(trip.caregiverId) ?? []
@@ -431,9 +460,25 @@ export function repeatCompanions(trips: Trip[]) {
   return [...grouped.entries()]
     .map(([caregiverId, list]) => {
       const sorted = [...list].sort((a, b) => tripStamp(b).localeCompare(tripStamp(a)))
-      return { caregiverId, count: list.length, latest: sorted[0] as Trip }
+      const rebookable = [...list].filter(item => packageAllowsRebook(item.packageId)).sort((a, b) => tripStamp(b).localeCompare(tripStamp(a)))
+      return {
+        caregiverId,
+        count: list.length,
+        latest: sorted[0] as Trip,
+        rebookFrom: (rebookable[0] as Trip | undefined) ?? null,
+      }
     })
     .sort((a, b) => b.count - a.count)
+}
+
+/** คนเดิมที่จองซ้ำได้ จากนัด Plus/Care ที่จบแล้วเท่านั้น */
+export function repeatCompanions(trips: Trip[]) {
+  return groupCompanions(trips, true)
+}
+
+/** คนที่เคยไปด้วยทั้งหมด รวม Basic ใช้ในหน้าประวัติ */
+export function historyCompanions(trips: Trip[]) {
+  return groupCompanions(trips, false)
 }
 
 export function isOpenStatus(status: TripStatus) {
@@ -450,29 +495,32 @@ export function viewStatus(status: TripStatus, service: ServiceType): TripStatus
   return status
 }
 
-export function statusFlow(service: ServiceType): TripStatus[] {
+export function statusFlow(service: ServiceType, packageId?: CarePackageId): TripStatus[] {
   void service
-  return ['requested', 'confirmed', 'at_hospital', 'waiting', 'examining', 'with_doctor', 'completed']
+  const steps: TripStatus[] = ['requested', 'confirmed', 'at_hospital', 'waiting', 'examining']
+  if (packageHasNotes(packageId)) steps.push('with_doctor')
+  steps.push('completed')
+  return steps
 }
 
 export function statusLabel(status: TripStatus, service: ServiceType) {
   switch (viewStatus(status, service)) {
     case 'requested':
-      return 'รอผู้ดูแลยืนยัน'
+      return 'รอผู้ดูแลรับงาน'
     case 'confirmed':
-      return 'รับงานแล้ว'
+      return 'ผู้ดูแลรับงานแล้ว'
     case 'cancelled':
       return 'ยกเลิกแล้ว'
     case 'at_hospital':
-      return 'อยู่โรงพยาบาลแล้ว'
+      return 'ถึงโรงพยาบาลแล้ว'
     case 'waiting':
-      return 'อยู่ระหว่างรอคิว'
+      return 'กำลังรอคิว'
     case 'examining':
       return 'กำลังตรวจ'
     case 'with_doctor':
-      return 'กำลังฟังแพทย์'
+      return 'ช่วยฟังหมอ'
     case 'completed':
-      return 'จบการดูแลที่โรงพยาบาล'
+      return 'จบการดูแลแล้ว'
     default:
       return 'อัปเดตสถานะ'
   }
@@ -485,29 +533,29 @@ export function statusColor(status: TripStatus) {
   return 'primary'
 }
 
-export function nextStatus(status: TripStatus, service: ServiceType) {
-  const flow = statusFlow(service)
+export function nextStatus(status: TripStatus, service: ServiceType, packageId?: CarePackageId) {
+  const flow = statusFlow(service, packageId)
   const index = flow.indexOf(viewStatus(status, service))
   if (index < 0 || index >= flow.length - 1) return null
   return flow[index + 1] ?? null
 }
 
-export function nextActionLabel(status: TripStatus, service: ServiceType) {
-  const next = nextStatus(status, service)
+export function nextActionLabel(status: TripStatus, service: ServiceType, packageId?: CarePackageId) {
+  const next = nextStatus(status, service, packageId)
   if (!next) return null
   switch (next) {
     case 'confirmed':
       return 'รับงาน'
     case 'at_hospital':
-      return 'อยู่โรงพยาบาลแล้ว'
+      return 'ถึงโรงพยาบาลแล้ว'
     case 'waiting':
-      return 'อยู่ระหว่างรอคิว'
+      return 'เริ่มรอคิว'
     case 'examining':
-      return 'กำลังตรวจ'
+      return 'เริ่มตรวจ'
     case 'with_doctor':
-      return 'กำลังฟังแพทย์'
+      return 'เริ่มช่วยฟังหมอ'
     case 'completed':
-      return 'จบงานและส่งโน้ต'
+      return packageHasNotes(packageId) ? 'จบงานและส่งสรุป' : 'จบการดูแล'
     default:
       return null
   }
@@ -520,13 +568,13 @@ export function familyStatusText(status: TripStatus, nickname: string, elderName
     case 'confirmed':
       return `${nickname}รับงานดูแล${elderName}ที่${place}แล้ว หากติดต่อฉุกเฉิน โทรหลานจ๋า ${EMERGENCY_PHONE}`
     case 'at_hospital':
-      return `${nickname}อยู่โรงพยาบาลกับ${elderName}ที่${place}แล้ว`
+      return `${nickname}ถึงโรงพยาบาลกับ${elderName}ที่${place}แล้ว`
     case 'waiting':
-      return `${nickname}อยู่ระหว่างรอคิวกับ${elderName}ที่${place}`
+      return `${nickname}กำลังรอคิวกับ${elderName}ที่${place}`
     case 'examining':
-      return `${nickname}กำลังตรวจกับ${elderName}`
+      return `${nickname}กำลังอยู่ระหว่างตรวจกับ${elderName}`
     case 'with_doctor':
-      return `${nickname}กำลังฟังแพทย์กับ${elderName}`
+      return `${nickname}กำลังช่วยฟังหมอให้${elderName}`
     case 'completed':
       return `${nickname}จบการดูแล${elderName}ที่${place}แล้ว`
     default:
