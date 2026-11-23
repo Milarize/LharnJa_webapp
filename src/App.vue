@@ -75,12 +75,15 @@
         </div>
       </div>
     </v-snackbar>
+
+    <DemoTour />
   </v-app>
 </template>
 
 <script setup lang="ts">
   import { computed, watch } from 'vue'
   import { useDisplay } from 'vuetify'
+  import DemoTour from '@/components/DemoTour.vue'
   import ShellMenu from '@/components/ShellMenu.vue'
   import { useShell } from '@/composables/useShell'
 

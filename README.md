@@ -25,12 +25,12 @@ Scaffolded with Vuetify CLI.
 
 ## 📁 Project Structure
 
-- `src/main.ts` — application entry point
-- `src/App.vue` — root component
-- `src/components/` — reusable Vue components
-- `src/plugins/` — plugin registration and setup
-- `src/styles/` — global styles and theme settings
-- `public/` — static public files
+- `src/main.ts`   application entry point
+- `src/App.vue`   root component
+- `src/components/`   reusable Vue components
+- `src/plugins/`   plugin registration and setup
+- `src/styles/`   global styles and theme settings
+- `public/`   static public files
 
 ## ✨ Enabled Features
 

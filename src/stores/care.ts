@@ -309,8 +309,9 @@ export const useCareStore = defineStore('care', () => {
     return thaidIds.value.includes(id)
   }
 
-  function verifyThaid(id: string) {
+  function verifyThaid(id: string, silent = false) {
     if (!thaidIds.value.includes(id)) thaidIds.value = [...thaidIds.value, id]
+    if (silent) return
     const name = FAMILY_MEMBERS.find(person => person.id === id)?.name ?? 'สมาชิก'
     notify(`ยืนยันตัวตน${name}ด้วย ThaID แล้ว`)
   }
@@ -346,7 +347,7 @@ export const useCareStore = defineStore('care', () => {
     notify(`สมัครแพ็กเกจ ${name} แล้ว`)
   }
 
-  function resetDemo() {
+  function resetDemo(silent = false) {
     const seed = createSeed()
     elders.value = seed.elders
     trips.value = seed.trips
@@ -354,7 +355,8 @@ export const useCareStore = defineStore('care', () => {
     providerTier.value = null
     lineNotices.value = []
     armOpenRequests()
-    notify('รีเซ็ตข้อมูลสาธิตแล้ว', false)
+    if (!silent) notify('รีเซ็ตข้อมูลสาธิตแล้ว', false)
+    else clearToast()
     ensureClock()
   }
 

@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
   import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-  import { useRouter } from 'vue-router'
+  import { useRoute, useRouter } from 'vue-router'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
   import CareUpdateCard from '@/components/CareUpdateCard.vue'
   import { caregiverById, tripPlaceName } from '@/domain/data'
@@ -112,10 +112,18 @@
   const verified = computed(() => (booker ? store.isVerified(booker.id) : false))
   const providerVerified = computed(() => store.isVerified(PROVIDER_THAID.id))
   const pendingEnter = ref<'home' | 'book' | 'trips' | 'history' | 'plans' | null>(null)
-  const tab = ref<'user' | 'provider'>('user')
+  const route = useRoute()
+  const tab = ref<'user' | 'provider'>(route.query.side === 'provider' ? 'provider' : 'user')
   const chat = ref<HTMLElement | null>(null)
   const now = ref(new Date())
   let timer = 0
+
+  watch(
+    () => route.query.side,
+    value => {
+      tab.value = value === 'provider' ? 'provider' : 'user'
+    },
+  )
 
   const clock = computed(() =>
     new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(now.value),

@@ -85,7 +85,7 @@
           <div class="text-label-large mb-2">เวลานัด</div>
           <TimeWheel v-model="draft.followUpTime" />
           <p class="text-body-small text-medium-emphasis mt-2 mb-0">
-            เลื่อนชั่วโมงและนาทีขึ้นลง แถบสีเขียวคือเวลาที่เลือก {{ draft.followUpTime || '—' }} น.
+            เลื่อนชั่วโมงและนาทีขึ้นลง แถบสีเขียวคือเวลาที่เลือก {{ draft.followUpTime || ' ' }} น.
           </p>
         </div>
 
