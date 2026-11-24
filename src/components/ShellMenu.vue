@@ -24,6 +24,18 @@
 
     <v-spacer />
 
+    <v-btn class="mb-2" color="primary" prepend-icon="mdi-presentation-play" variant="tonal" :to="{ path: '/', query: { demo: '1' } }">
+      Demo ทั้งสองฝั่ง
+    </v-btn>
+    <v-btn
+      class="mb-2"
+      color="primary"
+      prepend-icon="mdi-briefcase-outline"
+      variant="text"
+      :to="{ path: '/', query: { demo: '1', tour: 'provider', side: 'provider' } }"
+    >
+      Demo ผู้ให้บริการ
+    </v-btn>
     <v-btn class="mb-2" prepend-icon="mdi-backup-restore" variant="text" @click="store.resetDemo()">
       รีเซ็ตข้อมูลสาธิต
     </v-btn>
