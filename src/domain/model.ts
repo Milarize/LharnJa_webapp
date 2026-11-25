@@ -101,6 +101,24 @@ export const CARE_PACKAGES: {
 export const PACKAGE_PROFESSIONS = ['ไม่ระบุ', 'พยาบาล', 'นักกายภาพบำบัด', 'ผู้ช่วยพยาบาล']
 export const PACKAGE_LANGUAGES = ['ไทย', 'อังกฤษ', 'จีน', 'ญี่ปุ่น']
 
+export const PACKAGE_COMPARE: {
+  label: string
+  values: Record<CarePackageId, boolean | string>
+}[] = [
+  { label: 'เพื่อนดูแลไปด้วยตลอดนัด', values: { p1: true, p2: true, p3: true } },
+  { label: 'ประกันอุบัติเหตุรายวัน', values: { p1: false, p2: true, p3: true } },
+  { label: 'ดูแลใกล้ชิด 8 ชั่วโมง', values: { p1: false, p2: true, p3: true } },
+  { label: 'ช่วยฟังหมอและส่งสรุปให้ลูกหลาน', values: { p1: false, p2: true, p3: true } },
+  { label: 'จองคนเดิมซ้ำได้', values: { p1: false, p2: true, p3: true } },
+  { label: 'เลือกวิชาชีพของผู้ดูแล', values: { p1: false, p2: false, p3: true } },
+  { label: 'เลือกภาษาที่ใช้คุย', values: { p1: false, p2: false, p3: true } },
+  { label: 'นัดล่วงหน้า', values: { p1: '3 วัน', p2: '2 ชั่วโมง', p3: '2 ชั่วโมง' } },
+]
+
+export function caregiverVerified(badges?: string[]) {
+  return badges?.includes('ยืนยันตัวตนแล้ว') ?? false
+}
+
 export function carePackage(id: CarePackageId) {
   return CARE_PACKAGES.find(item => item.id === id) ?? CARE_PACKAGES[0]
 }

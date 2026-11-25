@@ -1,8 +1,12 @@
 <template>
   <v-card class="pa-4" rounded="md" variant="outlined">
-    <div class="text-title-medium font-weight-medium mb-1">สรุปให้ลูกหลาน</div>
+    <h2 class="text-title-large mb-1">สรุปให้ลูกหลาน</h2>
     <div class="text-body-medium mb-1">{{ trip.elderName }}</div>
     <p class="text-body-small text-medium-emphasis mb-3">{{ intro }}</p>
+    <div v-if="!sent" class="note-caution mb-4" role="note">
+      <v-icon aria-hidden="true" icon="mdi-shield-alert-outline" size="22" />
+      <span>ระวังใส่ข้อมูลผิด ข้อความนี้เป็นข้อมูลสุขภาพ ส่งแล้วแก้ไม่ได้</span>
+    </div>
 
     <div v-if="sent" class="d-flex flex-column ga-3">
       <v-alert density="compact" icon="mdi-check-circle" type="success" variant="tonal">
@@ -55,22 +59,17 @@
       </section>
 
       <section v-if="needsAppointment" class="d-flex flex-column ga-4">
-        <div>
-          <div class="text-label-large mb-1">นัดครั้งต่อไป</div>
-          <p class="text-body-small text-medium-emphasis mb-0">วันและเวลาจดเองได้ สถานที่เริ่มจากที่นัดนี้ เปลี่ยนได้จากช่องเลือก</p>
-        </div>
+        <div class="text-label-large">นัดครั้งต่อไป</div>
 
         <v-menu v-model="dateMenu" :close-on-content-click="false" location="bottom start">
           <template #activator="{ props: menu }">
-            <v-text-field
-              v-bind="menu"
-              density="comfortable"
-              hide-details
-              label="วันที่นัดครั้งต่อไป"
-              prepend-inner-icon="mdi-calendar"
-              readonly
-              :model-value="draft.followUpDate ? appointmentDate(draft.followUpDate) : ''"
-            />
+            <button class="follow-date" type="button" v-bind="menu">
+              <v-icon icon="mdi-calendar" size="26" />
+              <span>
+                <span class="follow-kicker">วันที่</span>
+                <span class="follow-value">{{ draft.followUpDate ? appointmentDate(draft.followUpDate) : 'เลือกวัน' }}</span>
+              </span>
+            </button>
           </template>
           <v-date-picker
             color="primary"
@@ -84,28 +83,40 @@
         <div>
           <div class="text-label-large mb-2">เวลานัด</div>
           <TimeWheel v-model="draft.followUpTime" />
-          <p class="text-body-small text-medium-emphasis mt-2 mb-0">
-            เลื่อนชั่วโมงและนาทีขึ้นลง แถบสีเขียวคือเวลาที่เลือก {{ draft.followUpTime || ' ' }} น.
-          </p>
         </div>
 
-        <v-select
-          v-model="draft.followUpPlace"
-          density="comfortable"
-          hide-details
-          item-title="title"
-          item-value="value"
-          :items="placeChoices"
-          label="สถานที่ปัจจุบัน"
-          prepend-inner-icon="mdi-hospital-building"
+        <div class="follow-place">
+          <v-icon color="coral" icon="mdi-hospital-building" size="26" />
+          <div>
+            <div class="follow-value">{{ shownPlace }}</div>
+            <div class="follow-kicker">{{ trip.department }}</div>
+          </div>
+        </div>
+        <v-btn
+          v-if="!changingPlace"
+          class="align-self-start"
+          prepend-icon="mdi-swap-horizontal"
+          size="small"
+          variant="text"
+          @click="changingPlace = true"
         >
-          <template #selection="{ item }">
-            {{ item.raw.title }}
-          </template>
-          <template #item="{ props: itemProps, item }">
-            <v-list-item v-bind="itemProps" :subtitle="item.raw.subtitle" :title="item.raw.title" />
-          </template>
-        </v-select>
+          เปลี่ยนโรงพยาบาล
+        </v-btn>
+        <div v-else class="d-flex flex-column ga-2">
+          <v-select
+            density="comfortable"
+            hide-details
+            item-title="title"
+            item-value="value"
+            :items="hospitalChoices"
+            label="โรงพยาบาลใหม่"
+            :model-value="draft.followUpPlace || null"
+            @update:model-value="chooseHospital"
+          />
+          <v-btn class="align-self-start" size="small" variant="text" @click="clearHospitalChange">
+            ใช้โรงพยาบาลเดิม
+          </v-btn>
+        </div>
       </section>
 
       <v-btn v-if="plan === 'standard'" :disabled="gaps.length > 0" size="small" variant="tonal" @click="arranged = true">
@@ -140,11 +151,13 @@
       />
 
       <div class="text-label-large">ส่งให้ใคร</div>
-      <p class="text-body-small text-medium-emphasis mb-0">ส่งได้เฉพาะคนที่ยืนยันตัวตนแล้ว</p>
       <div v-for="person in FAMILY_MEMBERS" :key="person.id" class="d-flex align-center justify-space-between ga-3">
-        <div>
-          <div class="text-body-medium font-weight-medium">{{ person.name }}</div>
-          <div class="text-body-small text-medium-emphasis">{{ person.relation }}</div>
+        <div class="d-flex align-center ga-2">
+          <VerifiedMark :ok="store.isVerified(person.id)" />
+          <div>
+            <div class="text-body-medium font-weight-medium">{{ person.name }}</div>
+            <div class="text-body-small text-medium-emphasis">{{ person.relation }}</div>
+          </div>
         </div>
         <v-btn
           v-if="store.isVerified(person.id)"
@@ -155,7 +168,6 @@
         >
           {{ selected.includes(person.id) ? 'จะได้รับสรุป' : 'ส่งให้คนนี้' }}
         </v-btn>
-        <span v-else class="text-body-small text-medium-emphasis">ยังไม่ยืนยันตัวตน</span>
       </div>
 
       <p class="text-body-small text-medium-emphasis mb-0">ร่างถูกบันทึกแล้ว ออกจากหน้านี้แล้วกลับมาแก้ได้</p>
@@ -164,8 +176,12 @@
 
     <v-dialog v-model="confirming" max-width="420">
       <v-card class="pa-4" rounded="md">
-        <div class="text-title-medium font-weight-medium mb-2">ตรวจอีกครั้งก่อนส่ง</div>
-        <p class="text-body-small mb-3">ส่งให้ {{ selectedNames }} ข้อความนี้ถูกล็อกหลังส่ง</p>
+        <h2 class="text-title-large mb-2">ตรวจอีกครั้งก่อนส่ง</h2>
+        <div class="note-caution mb-3" role="note">
+          <v-icon aria-hidden="true" icon="mdi-shield-alert-outline" size="22" />
+          <span>ตรวจให้ตรงกับที่ฟังมา ส่งผิดแล้วแก้ไม่ได้</span>
+        </div>
+        <p class="text-body-small mb-3">ส่งให้ {{ selectedNames }}</p>
         <CareUpdateCard v-bind="liveCard" caption="นี่คือข้อความที่จะส่ง" />
         <div class="d-flex justify-end ga-2 mt-4">
           <v-btn variant="text" @click="confirming = false">กลับไปแก้</v-btn>
@@ -179,9 +195,10 @@
 <script setup lang="ts">
   import { computed, reactive, ref, watch } from 'vue'
   import CareUpdateCard from '@/components/CareUpdateCard.vue'
+  import VerifiedMark from '@/components/VerifiedMark.vue'
   import TimeWheel from '@/components/TimeWheel.vue'
   import type { ShareBasis, Trip } from '@/domain/types'
-  import { tripPlaceName } from '@/domain/data'
+  import { hospitals, tripPlaceName } from '@/domain/data'
   import { appointmentDate, CARE_CLOSING, careUpdate, FAMILY_MEMBERS, needsFollowUp, noteGaps, PROVIDER_TIERS, SHARE_BASIS } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
@@ -204,6 +221,7 @@
   const arranged = ref(false)
   const confirming = ref(false)
   const dateMenu = ref(false)
+  const changingPlace = ref(false)
   const custom = reactive({ doctorSaid: false, medicines: false, nextVisit: false })
 
   const TEMPLATES = [
@@ -239,7 +257,10 @@
       draft.caution = note?.caution || CARE_CLOSING
       draft.followUpDate = note?.followUpDate ?? ''
       draft.followUpTime = note?.followUpTime ?? ''
-      draft.followUpPlace = note?.followUpPlace ?? ''
+      const savedPlace = note?.followUpPlace ?? ''
+      const inherited = savedPlace === tripPlaceName(props.trip) || savedPlace === props.trip.pickup
+      draft.followUpPlace = inherited ? '' : savedPlace
+      changingPlace.value = Boolean(draft.followUpPlace)
       selected.value = [...(note?.sentTo ?? [])].filter(id => store.isVerified(id))
       basis.value = [...(note?.shareBasis ?? [])]
       doctorConfirm.value = Boolean(note?.doctorConfirm)
@@ -260,6 +281,7 @@
     if (props.trip.visitNote?.sentAt) return
     store.saveVisitNote(props.trip.id, {
       ...draft,
+      followUpPlace: draft.followUpPlace || tripPlaceName(props.trip),
       sentTo: selected.value,
       shareBasis: basis.value,
       doctorConfirm: doctorConfirm.value,
@@ -269,29 +291,17 @@
 
   const needsAppointment = computed(() => needsFollowUp(draft.nextVisit))
   const hospital = computed(() => tripPlaceName(props.trip))
-  const currentPlace = computed(() => props.trip.pickup || hospital.value)
-  const placeChoices = computed(() => {
-    const choices = [
-      {
-        title: currentPlace.value,
-        subtitle: `สถานที่ปัจจุบัน · ${props.trip.department}`,
-        value: currentPlace.value,
-      },
-    ]
-    if (draft.followUpPlace && draft.followUpPlace !== currentPlace.value) {
-      choices.push({
-        title: draft.followUpPlace,
-        subtitle: 'ที่เลือกไว้',
-        value: draft.followUpPlace,
-      })
-    }
-    return choices
-  })
+  const shownPlace = computed(() => draft.followUpPlace || hospital.value)
+  const hospitalChoices = computed(() =>
+    hospitals
+      .filter(item => item.short !== hospital.value)
+      .map(item => ({ title: item.name, value: item.short })),
+  )
   const followUpLine = computed(() => {
     if (!needsAppointment.value) return ''
     if (!draft.followUpDate || !draft.followUpTime) return 'ยังไม่ได้จดวันและเวลา'
     const when = appointmentDate(draft.followUpDate)
-    const place = draft.followUpPlace || currentPlace.value
+    const place = shownPlace.value
     return `${when} เวลา ${draft.followUpTime} น. ที่ ${place} · ${props.trip.department}`
   })
   const visitLine = computed(() => `${hospital.value} · ${props.trip.department} · ${props.trip.date} ${props.trip.time} น.`)
@@ -342,7 +352,15 @@
   function fillFollowUpDefaults() {
     if (!draft.followUpDate) draft.followUpDate = props.trip.date
     if (!draft.followUpTime) draft.followUpTime = props.trip.time || '09:00'
-    if (!draft.followUpPlace) draft.followUpPlace = currentPlace.value
+  }
+
+  function chooseHospital(value: unknown) {
+    draft.followUpPlace = typeof value === 'string' ? value : ''
+  }
+
+  function clearHospitalChange() {
+    draft.followUpPlace = ''
+    changingPlace.value = false
   }
 
   function chooseFollowDate(value: unknown) {
@@ -389,3 +407,68 @@
     store.sendVisitNote(props.trip.id, selected.value)
   }
 </script>
+
+<style scoped>
+  .note-caution {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border: 1.5px solid #a16207;
+    border-radius: 12px;
+    background: #fff6e8;
+    color: #5c3b06;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .note-caution :deep(.v-icon) {
+    margin-top: 1px;
+    color: #a16207;
+  }
+
+  .follow-date {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid #6f6256;
+    border-radius: 16px;
+    background: #fffcf8;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .follow-date:focus-visible {
+    outline: 2px solid #0e6b62;
+    outline-offset: 2px;
+  }
+
+  .follow-date :deep(.v-icon) {
+    color: #0e6b62;
+  }
+
+  .follow-kicker {
+    display: block;
+    color: #5c534c;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .follow-value {
+    display: block;
+    color: #241c16;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .follow-place {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+</style>

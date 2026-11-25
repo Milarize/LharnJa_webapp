@@ -211,8 +211,8 @@
   .time-wheel-caption {
     margin-bottom: 6px;
     text-align: center;
-    font-size: 13px;
-    color: #6b6258;
+    font-size: 1rem;
+    color: #3f3832;
   }
 
   .time-wheel-frame {
