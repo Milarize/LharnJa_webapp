@@ -44,8 +44,9 @@
     border: 1px solid #e4d8c8;
     border-radius: 16px;
     padding: 14px;
-    font-size: 13px;
+    font-size: 1rem;
     line-height: 1.5;
+    font-family: var(--v-font-body);
   }
 
   header {
@@ -56,14 +57,16 @@
   }
 
   .title {
+    color: #0e6b62;
+    font-size: 1.125rem;
     font-weight: 700;
   }
 
   .sub,
   .visit,
   .caption {
-    color: #6d6256;
-    font-size: 12px;
+    color: #3f3832;
+    font-size: 0.9375rem;
   }
 
   .hello {

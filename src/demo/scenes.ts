@@ -19,7 +19,7 @@ export const DEMO_SCENES: DemoScene[] = [
   {
     id: 'line-intro',
     title: 'เปิดจาก LINE',
-    say: 'ลูกหลานอย่างคุณนภาเปิดหลานจ๋าจาก LINE ไม่ต้องดาวน์โหลดแอปใหม่',
+    say: 'Killing Feature 1 — ความน่าเชื่อถือจากจุดแข็ง CDG ที่นำมา integrate รวมกัน',
     route: 'line',
     prep: 'fresh',
     track: 'family',
@@ -28,7 +28,7 @@ export const DEMO_SCENES: DemoScene[] = [
   {
     id: 'thaid',
     title: 'ยืนยันตัวตนครั้งแรก',
-    say: 'ยืนยันตัวตนด้วย ThaID ครั้งเดียว ได้แค่ชื่อและผลว่าเป็นบุคคลจริง ไม่ดึงข้อมูลสุขภาพ',
+    say: 'Value — ThaiD (CDT) + ตรวจประวัติ (CSGS) + NostraMap ทำให้ครอบครัวไว้ใจได้',
     route: 'line',
     track: 'family',
     holdMs: 5500,
@@ -72,7 +72,7 @@ export const DEMO_SCENES: DemoScene[] = [
   {
     id: 'trip',
     title: 'สถานะนัดแบบเรียลไทม์',
-    say: 'ครอบครัวติดตามได้ว่าผู้ดูแลถึงโรงพยาบาล รอคิว พบแพทย์ หรือจบงานแล้ว พร้อมไทม์ไลน์',
+    say: 'Killing Feature 2 — สถานะเรียลไทม์ ครอบครัวเห็นตลอดว่าอยู่ขั้นไหนของนัด',
     route: 'trip',
     params: { id: 'trip-somsri-next' },
     prep: 'family-verified',
@@ -131,7 +131,7 @@ export const DEMO_SCENES: DemoScene[] = [
   {
     id: 'provider-active',
     title: 'งานที่รับแล้ว',
-    say: 'ระหว่างอยู่โรงพยาบาล อัปเดตสถานะทีละขั้น ครอบครัวเห็นความคืบหน้าทาง LINE ทันที',
+    say: 'Value ของ KF2 — ผู้ดูแลอัปเดตทีละขั้น ครอบครัวเห็นความคืบหน้าทาง LINE ทันที',
     route: 'caregiver',
     prep: 'caregiver',
     track: 'provider',
@@ -140,7 +140,7 @@ export const DEMO_SCENES: DemoScene[] = [
   {
     id: 'provider-note',
     title: 'สรุปให้ลูกหลาน',
-    say: 'แพ็กเกจ Plus และ Care ถึงขั้นช่วยฟังหมอแล้ว ผู้ดูแลกรอกสรุปสั้น ๆ ส่งเข้า LINE ให้ลูกหลาน',
+    say: 'Killing Feature 3 — ช่วยฟังหมอแล้วสรุปสั้น ๆ ส่งเข้า LINE ให้ลูกหลาน',
     route: 'trip',
     params: { id: 'trip-somsri-next' },
     prep: 'caregiver',

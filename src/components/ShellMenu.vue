@@ -5,7 +5,7 @@
         <v-icon color="white" icon="mdi-hand-heart" />
       </v-avatar>
       <div>
-        <div class="text-title-medium font-weight-bold">หลานจ๋า</div>
+        <div class="text-title-medium font-weight-bold app-brand">หลานจ๋า</div>
         <div class="text-body-small text-medium-emphasis">เพื่อนดูแลไปโรงพยาบาล</div>
       </div>
     </div>

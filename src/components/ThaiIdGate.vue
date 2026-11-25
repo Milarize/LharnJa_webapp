@@ -1,13 +1,20 @@
 <template>
   <div class="thaid-gate">
     <template v-if="!revealed">
-      <p class="eyebrow">{{ kind === 'provider' ? 'สำหรับผู้ดูแล' : 'เพื่อนดูแลไปด้วย' }}</p>
-      <h1>หลานจ๋า</h1>
-      <p class="lead">{{ kind === 'provider' ? 'รับงานอยู่ดูแลที่โรงพยาบาล แล้วส่งโน้ตให้ครอบครัว' : 'มีคนอยู่ด้วยตอนพบแพทย์ แล้วบอกครอบครัวให้ครบ' }}</p>
+      <div class="welcome">
+        <div class="mark" aria-hidden="true">
+          <v-icon color="primary" icon="mdi-hand-heart" size="22" />
+        </div>
+
+        <h1>หลานจ๋า</h1>
+        <p class="lead">{{ kind === 'provider' ? 'อยู่ดูแลที่โรงพยาบาล แล้วส่งโน้ตให้ครอบครัว' : 'มีคนอยู่ด้วยตอนพบแพทย์' }}</p>
+      </div>
 
       <ol class="story">
-        <li v-for="(step, index) in steps" :key="step.title">
-          <span>{{ index + 1 }}</span>
+        <li v-for="step in steps" :key="step.title">
+          <span class="dot" aria-hidden="true">
+            <v-icon color="primary" :icon="step.icon" size="20" />
+          </span>
           <div>
             <strong>{{ step.title }}</strong>
             <p>{{ step.text }}</p>
@@ -15,24 +22,23 @@
         </li>
       </ol>
 
-      <div class="thaid-strip">
-        <img alt="" src="/thaid.png" />
-        <div>
-          <strong>ยืนยันตัวตน</strong>
-          <p>คลิกปุ่มด้านล่างเพื่อเปิดหน้าจอง</p>
-        </div>
+      <div class="cta">
+        <v-btn class="thaid-action" rounded="lg" size="large" variant="flat" @click="revealed = true">
+          <img alt="" class="btn-mark" src="/thaid.png" />
+          เปิด ThaID
+        </v-btn>
+        <p class="fine">ยืนยันตัวตนครั้งเดียว แล้วเข้าใช้งานได้เลย</p>
       </div>
-      <v-btn class="thaid-action" color="primary" rounded="lg" size="large" @click="revealed = true">เปิด ThaID</v-btn>
     </template>
 
-    <template v-else>
+    <div v-else class="confirmed">
       <img alt="" class="thaid-icon" src="/thaid.png" />
       <h2>ได้ชื่อจาก ThaID แล้ว</h2>
       <div class="thaid-name">{{ name }}</div>
       <p>{{ relation }} · บัตร {{ maskedId }}</p>
       <p class="thaid-note">ได้แค่ชื่อกับผลว่าเป็นบุคคลจริง ไม่ได้ดึงข้อมูลสุขภาพ</p>
       <v-btn class="thaid-action" color="primary" rounded="lg" size="large" @click="emit('confirm')">ใช้ชื่อนี้และไปต่อ</v-btn>
-    </template>
+    </div>
   </div>
 </template>
 
@@ -55,14 +61,14 @@
   const steps = computed(() =>
     props.kind === 'provider'
       ? [
-          { title: 'รับงานที่ชัดเจน', text: 'รู้โรงพยาบาล แผนก และรายได้ของครั้งนี้ก่อนกดรับ' },
-          { title: 'อยู่ดูแลที่โรงพยาบาล', text: 'เริ่มดูแลจนจบงาน โดยไม่ต้องออกไปรับ' },
-          { title: 'สรุปให้ลูกหลาน', text: 'งาน Plus และ Care ช่วยฟังหมอ แล้วเลือกข้อความสั้น ๆ ส่งเข้า LINE' },
+          { icon: 'mdi-clipboard-check-outline', title: 'รับงานที่ชัดเจน', text: 'เห็นโรงพยาบาล แผนก และรายได้ก่อนกดรับ' },
+          { icon: 'mdi-hospital-building', title: 'อยู่ดูแลที่โรงพยาบาล', text: 'เริ่มดูแลจนจบงาน ไม่ต้องออกไปรับ' },
+          { icon: 'mdi-note-text-outline', title: 'สรุปให้ลูกหลาน', text: 'เลือกข้อความสั้น ๆ ส่งเข้า LINE' },
         ]
       : [
-          { title: 'จองนัดที่ต้องการ', text: 'แพ็กเกจ 1 เลือกวันนัดได้ 3 วัน เริ่มตั้งแต่วันที่สาม แพ็กเกจ 2 และ 3 นัดวันนี้ได้ถ้าเหลือเวลาอย่างน้อย 2 ชั่วโมง' },
-          { title: 'มีคนอยู่ด้วยตลอดนัด', text: 'รอคิวและพบแพทย์ด้วยกัน ที่โรงพยาบาล' },
-          { title: 'ครอบครัวเห็นความคืบหน้า', text: 'สถานะและสรุปจากผู้ดูแลส่งเข้า LINE ของลูกหลาน' },
+          { icon: 'mdi-calendar-plus', title: 'จองนัดที่ต้องการ', text: 'เลือกแพ็กเกจ แล้วเลือกวันนัด' },
+          { icon: 'mdi-account-heart-outline', title: 'มีคนอยู่ด้วยตลอดนัด', text: 'รอคิวและพบแพทย์ที่โรงพยาบาล' },
+          { icon: 'mdi-message-text-outline', title: 'ครอบครัวเห็นความคืบหน้า', text: 'สถานะและสรุปส่งเข้า LINE' },
         ],
   )
 </script>
@@ -71,114 +77,157 @@
   .thaid-gate {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    min-height: 100%;
     text-align: left;
-    padding: 4px 2px 12px;
+    padding: 8px 4px 8px;
+  }
+
+  .welcome {
+    margin-bottom: 18px;
+  }
+
+  .mark {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
+    border: 1.5px solid #d7ebe7;
+    border-radius: 50%;
+    background: #fff;
   }
 
   .eyebrow {
     margin: 0;
     color: #0e6b62;
-    font-size: 13px;
+    font-size: 0.95rem;
     font-weight: 700;
   }
 
   h1 {
-    margin: 2px 0 6px;
-    font-family: "Noto Serif Thai", "Leelawadee UI", serif;
-    font-size: 2.4rem;
+    margin: 0;
+    font-family: inherit;
+    font-size: 2.35rem;
     font-weight: 700;
     line-height: 1.15;
-    color: #241c16;
+    color: #0e6b62;
   }
 
   .lead {
-    margin: 0 0 14px;
-    color: #5c564e;
-    line-height: 1.5;
+    margin: 4px 0 0;
+    color: #3f3832;
+    font-size: 1.05rem;
+    line-height: 1.45;
   }
 
   .story {
+    position: relative;
     list-style: none;
-    margin: 0 0 14px;
+    margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 14px;
+  }
+
+  .story::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    bottom: 20px;
+    left: 19px;
+    width: 2px;
+    background: #cfe0dc;
   }
 
   .story li {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    background: white;
-    border-radius: 14px;
-    padding: 10px 12px;
+    position: relative;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 12px;
+    align-items: center;
   }
 
-  .story span {
-    flex: none;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: #0e6b62;
-    color: white;
+  .dot {
+    z-index: 1;
     display: grid;
     place-items: center;
-    font-size: 13px;
-    font-weight: 700;
+    width: 40px;
+    height: 40px;
+    border: 1.5px solid #d7ebe7;
+    border-radius: 50%;
+    background: #fff;
   }
 
   .story strong {
     display: block;
-    margin-bottom: 2px;
+    color: #241c16;
+    font-size: 1.05rem;
+    line-height: 1.3;
   }
 
   .story p,
-  .thaid-strip p,
-  .thaid-note {
+  .thaid-note,
+  .fine {
     margin: 0;
-    color: #5c564e;
-    font-size: 13px;
-    line-height: 1.45;
+    color: #5c534c;
+    font-size: 0.95rem;
+    line-height: 1.4;
   }
 
-  .thaid-strip {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    background: #f6f1e8;
-    border: 1px solid #e4d8c8;
-    border-radius: 14px;
-    padding: 10px 12px;
+  .cta {
+    margin-top: 22px;
   }
 
-  .thaid-strip img,
-  .thaid-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+  .fine {
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  .thaid-action :deep(.v-btn__content) {
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
     flex: none;
   }
 
-  .thaid-strip strong {
-    display: block;
-    margin-bottom: 2px;
+  .confirmed {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    margin: auto 0;
+    padding: 28px 18px 22px;
+    border: 1.5px solid #d7c8b4;
+    border-radius: 20px;
+    background: #fffcf8;
+    text-align: center;
   }
 
   .thaid-icon {
-    margin: 12px auto 12px;
+    display: block;
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 12px;
+    border-radius: 14px;
   }
 
   h2 {
     margin: 0 0 8px;
     text-align: center;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+    color: #0e6b62;
   }
 
   .thaid-name {
     text-align: center;
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     font-weight: 700;
   }
 
@@ -189,9 +238,8 @@
 
   .thaid-action {
     width: 100%;
-    max-width: 280px;
-    margin: 16px auto 0;
-    flex: none;
-    align-self: center;
+    margin: 0;
+    background: #0e6b62;
+    color: #fff;
   }
 </style>

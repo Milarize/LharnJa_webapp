@@ -19,7 +19,6 @@
     <v-alert v-if="error" class="mb-4" type="warning" variant="tonal">{{ error }}</v-alert>
 
     <div v-if="step === 1">
-      <p class="text-body-medium text-medium-emphasis mb-4">เลือกคนที่จะมีเพื่อนดูแลไปด้วย</p>
       <v-row>
         <v-col v-for="elder in store.elders" :key="elder.id" cols="12" sm="6">
           <v-card
@@ -51,22 +50,18 @@
     </div>
 
     <div v-else-if="step === 2">
-      <p class="text-body-medium text-medium-emphasis mb-4">
-        เลือกการดูแลครั้งนี้ จ่ายตอนจองครั้งเดียว
+      <p class="text-body-large mb-4">
+        เทียบการดูแล แล้วเลือกแบบที่ต้องการ จ่ายตอนจองครั้งเดียว
       </p>
-      <v-row>
-        <v-col v-for="item in packageChoices" :key="item.id" cols="12">
-          <PackageChoice
-            :item="item"
-            selectable
-            :selected="packageId === item.id"
-            @select="selectPackage"
-          />
-        </v-col>
-      </v-row>
+      <PackageCompare
+        :items="packageChoices"
+        selectable
+        :selected="packageId"
+        @select="selectPackage"
+      />
       <div v-if="selectedPackage.profession" class="d-flex flex-column ga-4 mt-5">
         <div>
-          <div class="text-label-large mb-2">วิชาชีพของผู้ดูแล</div>
+          <h3 class="text-title-large mb-2">วิชาชีพของผู้ดูแล</h3>
           <div class="d-flex flex-wrap ga-2">
             <v-chip
               v-for="item in PACKAGE_PROFESSIONS"
@@ -80,7 +75,7 @@
           </div>
         </div>
         <div>
-          <div class="text-label-large mb-2">ภาษา</div>
+          <h3 class="text-title-large mb-2">ภาษา</h3>
           <div class="d-flex flex-wrap ga-2">
             <v-chip
               v-for="item in PACKAGE_LANGUAGES"
@@ -265,25 +260,27 @@
               >
                 คนเดิม
               </v-chip>
-              <div class="text-title-medium font-weight-bold">{{ item.caregiver.nickname }}</div>
-              <div class="text-body-small text-medium-emphasis">
-                {{ item.caregiver.name }} · {{ item.caregiver.gender === 'female' ? 'หญิง' : 'ชาย' }} ·
-                ประสบการณ์ {{ item.caregiver.years }} ปี
+              <div class="d-flex align-center ga-2">
+                <div class="text-title-medium font-weight-bold">{{ item.caregiver.nickname }}</div>
+                <VerifiedMark v-if="caregiverVerified(item.caregiver.badges)" />
               </div>
-              <div class="d-flex align-center ga-1 text-body-small mt-1">
-                <v-icon color="gold" icon="mdi-star" size="16" />
-                {{ item.caregiver.rating }} · {{ item.caregiver.reviews }} รีวิว · {{ item.caregiver.zone }}
+              <div class="d-flex align-center flex-wrap ga-3 text-body-medium mt-1">
+                <span class="d-inline-flex align-center ga-1" title="คะแนน">
+                  <v-icon color="gold" icon="mdi-star" size="20" />{{ item.caregiver.rating }}
+                </span>
+                <span class="d-inline-flex align-center ga-1" title="รีวิว">
+                  <v-icon icon="mdi-comment-quote-outline" size="20" />{{ item.caregiver.reviews }}
+                </span>
+                <span class="d-inline-flex align-center ga-1" title="ประสบการณ์">
+                  <v-icon icon="mdi-briefcase-outline" size="20" />{{ item.caregiver.years }}
+                </span>
+                <span class="d-inline-flex align-center ga-1">
+                  <v-icon icon="mdi-map-marker" size="20" />{{ item.caregiver.zone }}
+                </span>
               </div>
-              <div class="d-flex flex-wrap ga-1 my-3">
-                <v-chip v-for="badge in item.caregiver.badges" :key="badge" size="small" variant="tonal">
-                  {{ badge }}
-                </v-chip>
-              </div>
+              <BadgeMarks class="my-3" :badges="item.caregiver.badges" />
               <div class="d-flex justify-space-between align-center">
-                <div>
-                  <div class="text-title-medium font-weight-bold">{{ baht(selectedPackage.price) }}</div>
-                  <div class="text-body-small text-medium-emphasis">ราคาแพ็กเกจนี้ เติมต่อการจอง</div>
-                </div>
+                <div class="text-title-medium font-weight-bold">{{ baht(selectedPackage.price) }}</div>
                 <v-chip color="primary" variant="flat">
                   {{ caregiverId === item.caregiver.id ? 'เลือกแล้ว' : 'เลือก' }}
                 </v-chip>
@@ -351,9 +348,11 @@
 <script setup lang="ts">
   import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
+  import BadgeMarks from '@/components/BadgeMarks.vue'
   import PlaceMap from '@/components/PlaceMap.vue'
-  import PackageChoice from '@/components/PackageChoice.vue'
+  import PackageCompare from '@/components/PackageCompare.vue'
   import TimeWheel from '@/components/TimeWheel.vue'
+  import VerifiedMark from '@/components/VerifiedMark.vue'
   import type { CarePackageId, Hospital, NeedId } from '@/domain/types'
   import { caregiverById, tripPlaceName } from '@/domain/data'
   import { searchPlaces } from '@/domain/placeSearch'
@@ -365,6 +364,7 @@
     baht,
     CARE_PACKAGES,
     canRebookTrip,
+    caregiverVerified,
     carePackage,
     dayLabel,
     DEPARTMENTS,
@@ -797,7 +797,7 @@
   .hospital-area {
     display: block;
     color: #6b6258;
-    font-size: 13px;
+    font-size: 1rem;
     font-weight: 400;
   }
 

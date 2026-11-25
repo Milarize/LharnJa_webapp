@@ -1,6 +1,7 @@
 :root {
   --v-font-body: "IBM Plex Sans Thai", "Leelawadee UI", "Segoe UI", sans-serif;
-  --v-font-heading: "Noto Serif Thai", "Leelawadee UI", serif;
+  --v-font-heading: "IBM Plex Sans Thai", "Leelawadee UI", "Segoe UI", sans-serif;
+  --care-green: #0e6b62;
 }
 
 html,
@@ -8,19 +9,121 @@ body,
 .v-application {
   font-family: var(--v-font-body);
   letter-spacing: 0;
+  --v-medium-emphasis-opacity: 0.78;
 }
 
-.v-application .text-body-large,
-.v-application .text-body-medium,
-.v-application .text-body-small,
-.v-application .text-headline-large,
-.v-application .text-headline-medium,
-.v-application .text-headline-small,
-.v-application .text-display-small,
-.v-application .text-title-large,
-.v-application .text-title-medium,
-.v-btn {
+.v-application :where(
+  h1,
+  h2,
+  h3,
+  .display-thai,
+  .text-headline-large,
+  .text-headline-medium,
+  .text-headline-small,
+  .text-title-large,
+  .v-app-bar-title
+) {
+  color: var(--care-green);
+  font-family: var(--v-font-body);
+}
+
+.v-application :where(h1, h2, h3, .display-thai) {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.v-application .bg-primary :where(
+  h1,
+  h2,
+  h3,
+  .display-thai,
+  .text-headline-large,
+  .text-headline-medium,
+  .text-headline-small,
+  .text-title-large
+) {
+  color: #fff;
+}
+
+.v-application .text-display-small { font-size: 2.5rem; line-height: 1.25; }
+.v-application .text-headline-large { font-size: 2.25rem; line-height: 1.25; }
+.v-application .text-headline-medium { font-size: 2rem; line-height: 1.3; }
+.v-application .text-headline-small { font-size: 1.75rem; line-height: 1.3; }
+.v-application .text-title-large { font-size: 1.5rem; line-height: 1.35; }
+.v-application .text-title-medium { font-size: 1.25rem; line-height: 1.4; }
+.v-application .text-title-small { font-size: 1.125rem; line-height: 1.4; }
+.v-application .text-body-large { font-size: 1.125rem; line-height: 1.5; }
+.v-application .text-body-medium { font-size: 1.0625rem; line-height: 1.5; }
+.v-application .text-body-small { font-size: 1rem; line-height: 1.5; }
+.v-application .text-label-large { font-size: 1.0625rem; line-height: 1.4; }
+.v-application .text-label-medium { font-size: 1rem; line-height: 1.4; }
+.v-application .text-label-small { font-size: 0.9375rem; line-height: 1.4; }
+
+.v-application .v-btn {
+  font-family: var(--v-font-body);
   letter-spacing: 0;
+}
+
+.v-application .v-btn--size-default:not(.v-btn--icon) {
+  --v-btn-size: 1rem;
+  --v-btn-height: 44px;
+  font-size: 1rem;
+}
+
+.v-application .v-btn--size-large:not(.v-btn--icon) {
+  --v-btn-size: 1.125rem;
+  --v-btn-height: 48px;
+  font-size: 1.125rem;
+}
+
+.v-application .v-chip.v-chip--size-small {
+  --v-chip-size: 0.9375rem;
+  font-size: 0.9375rem;
+}
+
+.v-application .v-chip.v-chip--size-default {
+  --v-chip-size: 1rem;
+  --v-chip-height: 40px;
+  font-size: 1rem;
+}
+
+.v-application .v-list-item--nav .v-list-item-title {
+  font-size: 1.0625rem;
+  line-height: 1.4;
+}
+
+.v-application .v-list-item-subtitle,
+.v-application .v-list-item--nav .v-list-item-subtitle {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.v-application .v-field,
+.v-application .v-alert {
+  font-size: 1.0625rem;
+}
+
+.v-application .app-brand {
+  color: var(--care-green);
+  font-family: var(--v-font-body);
+}
+
+.v-application .v-card--variant-outlined {
+  background: #fffcf8;
+  border-color: #6f6256;
+}
+
+.v-application .v-btn--variant-outlined:not(.text-white) {
+  background: #fff;
+  border-color: var(--care-green);
+  color: var(--care-green);
+}
+
+.v-application .v-chip--variant-outlined {
+  background: #fff;
+  border-color: var(--care-green);
+  color: var(--care-green);
 }
 
 .v-card-title,
@@ -31,11 +134,12 @@ body,
 }
 
 .display-thai {
-  font-family: var(--v-font-heading);
-  font-size: clamp(1.8rem, 4vw, 3rem);
-  font-weight: 600;
+  font-family: var(--v-font-body);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 700;
   line-height: 1.3;
   letter-spacing: 0;
+  color: var(--care-green);
 }
 
 .line-screen {
@@ -89,7 +193,7 @@ body,
 }
 
 .phone-sub {
-  font-size: 12px;
+  font-size: 13px;
   opacity: 0.9;
 }
 
@@ -103,8 +207,8 @@ body,
 .bubble {
   max-width: 88%;
   padding: 10px 12px;
-  line-height: 1.45;
-  font-size: 14px;
+  line-height: 1.5;
+  font-size: 16px;
 }
 
 .bubble-oa {
@@ -121,7 +225,7 @@ body,
 }
 
 .bubble-time {
-  font-size: 11px;
+  font-size: 13px;
   color: #4d5d6b;
   margin: 4px 0 10px;
 }
@@ -167,7 +271,7 @@ body,
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .rich-menu button:hover,

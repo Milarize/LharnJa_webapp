@@ -175,7 +175,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    font-size: 12px;
+    font-size: 0.9375rem;
     opacity: 0.85;
     margin-bottom: 6px;
   }
@@ -213,7 +213,7 @@
     position: fixed;
     z-index: 2300;
     right: 16px;
-    bottom: 90px;
+    bottom: 108px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;

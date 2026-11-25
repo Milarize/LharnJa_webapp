@@ -1,19 +1,17 @@
 <template>
   <div>
-    <h1 class="text-headline-small font-weight-medium mb-2">การดูแล</h1>
-    <p class="text-body-large text-medium-emphasis mb-6">
-      เลือกแบบที่ต้องการ จ่ายครั้งเดียวตอนจอง
+    <h1 class="text-headline-small mb-2">การดูแล</h1>
+    <p class="text-body-large mb-6">
+      เทียบ 3 แบบด้านล่าง แล้วเลือกตอนจอง จ่ายครั้งเดียว
     </p>
-    <div class="d-flex flex-column ga-4">
-      <PackageChoice v-for="item in CARE_PACKAGES" :key="item.id" :item="item" />
-    </div>
-    <v-btn class="mt-6" color="primary" prepend-icon="mdi-calendar-plus" :to="{ name: 'book' }">
+    <PackageCompare :items="CARE_PACKAGES" />
+    <v-btn class="mt-6" color="primary" prepend-icon="mdi-calendar-plus" size="large" :to="{ name: 'book' }">
       ไปเลือกตอนจอง
     </v-btn>
   </div>
 </template>
 
 <script setup lang="ts">
-  import PackageChoice from '@/components/PackageChoice.vue'
+  import PackageCompare from '@/components/PackageCompare.vue'
   import { CARE_PACKAGES } from '@/domain/model'
 </script>

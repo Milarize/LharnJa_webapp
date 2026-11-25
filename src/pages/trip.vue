@@ -71,9 +71,7 @@
           </v-timeline>
         </v-card>
 
-        <v-alert v-if="trip.review" class="mt-4" icon="mdi-star" type="success" variant="tonal">
-          {{ trip.review }}
-        </v-alert>
+        <ReviewNote class="mt-4" :text="trip.review" />
       </v-col>
 
       <v-col cols="12" md="5">
@@ -83,11 +81,14 @@
               <v-img v-if="caregiver" :alt="caregiver.nickname" cover :src="caregiver.photo" />
             </v-avatar>
             <div>
-              <div class="text-title-medium font-weight-bold">{{ caregiver?.nickname }}</div>
-              <div class="text-body-small text-medium-emphasis">{{ caregiver?.name }}</div>
+              <div class="d-flex align-center ga-2">
+                <div class="text-title-medium font-weight-bold">{{ caregiver?.nickname }}</div>
+                <VerifiedMark v-if="caregiverVerified(caregiver?.badges)" />
+              </div>
+              <div class="text-body-medium text-medium-emphasis">{{ caregiver?.name }}</div>
+              <BadgeMarks class="mt-1" :badges="caregiver?.badges" />
             </div>
           </div>
-          <p class="text-body-medium mb-3">{{ caregiver?.bio }}</p>
           <div class="d-flex flex-wrap ga-2">
             <v-btn prepend-icon="mdi-phone" variant="outlined" @click="fake('โทร')">โทร</v-btn>
             <v-btn
@@ -102,7 +103,7 @@
         </v-card>
 
         <v-card class="pa-4" rounded="md" variant="outlined">
-          <div class="text-title-medium font-weight-medium mb-2">สิ่งที่ผู้ดูแลควรรู้</div>
+          <h2 class="text-title-large mb-2">สิ่งที่ผู้ดูแลควรรู้</h2>
           <p class="text-body-medium mb-2">{{ trip.elderNote }}</p>
           <p v-if="trip.note" class="text-body-medium mb-3">{{ trip.note }}</p>
           <div v-if="trip.packageId" class="text-body-medium">{{ packageName(trip.packageId) }}</div>
@@ -187,8 +188,11 @@
 <script setup lang="ts">
   import { computed } from 'vue'
   import { useRoute } from 'vue-router'
-  import StatusChip from '@/components/StatusChip.vue'
+  import BadgeMarks from '@/components/BadgeMarks.vue'
   import FamilyNote from '@/components/FamilyNote.vue'
+  import ReviewNote from '@/components/ReviewNote.vue'
+  import StatusChip from '@/components/StatusChip.vue'
+  import VerifiedMark from '@/components/VerifiedMark.vue'
   import { caregiverById, hospitalById } from '@/domain/data'
   import type { CarePackageId, TripStatus } from '@/domain/types'
   import {
@@ -196,6 +200,7 @@
     carePackage,
     dayLabel,
     needLabel,
+    caregiverVerified,
     canRebookTrip,
     nextActionLabel,
     packageHasNotes,

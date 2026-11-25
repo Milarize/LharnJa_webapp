@@ -10,22 +10,23 @@
   />
   <div v-else>
     <v-card class="pa-5 mb-6" color="primary" rounded="md">
-      <div class="d-flex align-center ga-2 mb-3">
-        <v-icon icon="mdi-shield-check" size="18" />
-        <span class="text-label-large">ยืนยันตัวตนด้วย ThaID แล้ว</span>
-      </div>
       <div class="d-flex align-center ga-3">
         <v-avatar size="72">
           <v-img v-if="me" :alt="me.nickname" cover :src="me.photo" />
         </v-avatar>
         <div>
-          <div class="text-headline-small font-weight-medium">{{ me?.nickname }}</div>
-          <div class="text-body-medium" style="opacity: .9">
-            {{ me?.rating }} คะแนน · {{ me?.reviews }} รีวิว · ประสบการณ์ {{ me?.years }} ปี
+          <div class="d-flex align-center ga-2">
+            <div class="text-headline-small font-weight-medium">{{ me?.nickname }}</div>
+            <VerifiedMark />
+          </div>
+          <div class="d-flex align-center flex-wrap ga-3 text-body-medium mt-1" style="opacity: .95">
+            <span class="d-inline-flex align-center ga-1"><v-icon color="gold" icon="mdi-star" size="20" />{{ me?.rating }}</span>
+            <span class="d-inline-flex align-center ga-1"><v-icon icon="mdi-comment-quote-outline" size="20" />{{ me?.reviews }}</span>
+            <span class="d-inline-flex align-center ga-1"><v-icon icon="mdi-briefcase-outline" size="20" />{{ me?.years }}</span>
           </div>
         </div>
       </div>
-      <p class="text-body-medium mt-3 mb-0" style="opacity: .92">{{ me?.bio }}</p>
+      <BadgeMarks class="mt-3" :badges="me?.badges" />
     </v-card>
 
     <h2 class="text-title-large font-weight-medium mb-3">ตารางงานของฉัน</h2>
@@ -117,9 +118,11 @@
 
 <script setup lang="ts">
   import { computed } from 'vue'
-  import TripCard from '@/components/TripCard.vue'
+  import BadgeMarks from '@/components/BadgeMarks.vue'
   import StatusChip from '@/components/StatusChip.vue'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
+  import TripCard from '@/components/TripCard.vue'
+  import VerifiedMark from '@/components/VerifiedMark.vue'
   import { caregiverById, tripPlaceName } from '@/domain/data'
   import type { Trip } from '@/domain/types'
   import { dayLabel, isOpenStatus, nextActionLabel, packageHasNotes, PROVIDER_THAID, remainText, SELF_CAREGIVER_ID, statusFlow, statusLabel, tripStamp, viewStatus } from '@/domain/model'
@@ -174,12 +177,12 @@
   }
 
   .schedule-when strong {
-    font-size: 16px;
+    font-size: 1.125rem;
   }
 
   .schedule-when span {
-    color: #6d6256;
-    font-size: 12px;
+    color: #4e4842;
+    font-size: 1rem;
   }
 
   .schedule-body {
@@ -199,8 +202,8 @@
   .schedule-steps span {
     border-radius: 999px;
     background: #f3eee6;
-    color: #8a8178;
-    font-size: 11px;
+    color: #4e4842;
+    font-size: 0.9375rem;
     padding: 2px 8px;
   }
 
