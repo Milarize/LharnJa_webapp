@@ -3,6 +3,7 @@ import type { CarePackageId, NeedId, ProviderTier, Quote, ServiceType, ShareBasi
 export const FAMILY = {
   displayName: 'คุณนภา วงศ์สุข',
   lineName: 'คุณนภา',
+  phone: '081-442-1908',
   pickup: '128/4 ซอยลาดพร้าว 41 แขวงจรเข้บัว เขตลาดพร้าว กรุงเทพฯ',
   lat: 13.7928,
   lng: 100.5852,
