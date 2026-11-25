@@ -6,17 +6,17 @@
     </v-tabs>
 
     <div class="d-flex justify-center">
-      <div class="phone" :aria-label="tab === 'user' ? 'แชท LINE ของคนใช้บริการ' : 'แอปผู้ให้บริการ'">
+        <div class="phone" :aria-label="tab === 'user' ? 'แชท LINE ของคนใช้บริการ' : 'แชท LINE ของผู้ให้บริการ'">
         <div class="phone-status">{{ clock }}</div>
-        <div class="phone-bar" :class="{ 'phone-bar-app': tab === 'provider' }">
+        <div class="phone-bar">
           <v-icon color="white" icon="mdi-chevron-left" size="22" />
           <v-avatar color="white" size="34">
             <v-icon color="primary" icon="mdi-hand-heart" size="18" />
           </v-avatar>
           <div>
             <div class="d-flex align-center ga-1">
-              <strong>{{ tab === 'user' ? 'หลานจ๋า' : 'งานของฉัน' }}</strong>
-              <v-icon v-if="tab === 'user'" color="white" icon="mdi-check-decagram" size="14" />
+              <strong>หลานจ๋า</strong>
+              <v-icon color="white" icon="mdi-check-decagram" size="14" />
             </div>
             <div class="phone-sub">
               {{ tab === 'user' ? 'บัญชีทางการ' : providerVerified ? 'พี่แอน · ผู้ให้บริการ' : 'ผู้ให้บริการ' }}
@@ -79,18 +79,65 @@
             </button>
           </div>
         </template>
-        <div v-else class="phone-screen">
-          <ThaiIdGate
-            v-if="!providerVerified"
-            kind="provider"
-            detail="ทำครั้งเดียวตอนเริ่มรับงาน ครั้งถัดไปเปิดแอปแล้วดูงานได้เลย"
-            :masked-id="PROVIDER_THAID.maskedId"
-            :name="PROVIDER_THAID.name"
-            :relation="PROVIDER_THAID.relation"
-            @confirm="confirmProvider"
-          />
-          <CaregiverPage v-else />
-        </div>
+        <template v-else>
+          <div v-if="!providerVerified" class="phone-screen">
+            <ThaiIdGate
+              kind="provider"
+              detail="ทำครั้งเดียวตอนเริ่มรับงาน ครั้งถัดไปเปิดแอปแล้วดูงานได้เลย"
+              :masked-id="PROVIDER_THAID.maskedId"
+              :name="PROVIDER_THAID.name"
+              :relation="PROVIDER_THAID.relation"
+              @confirm="confirmProvider"
+            />
+          </div>
+          <template v-else>
+            <div ref="providerChat" class="phone-chat">
+              <div class="bubble bubble-oa">
+                สวัสดีค่ะ พี่แอน คำขอใหม่จะเด้งเข้าแชทนี้ กดรับหรือปฏิเสธจากข้อความได้เลย
+              </div>
+              <div class="bubble-time">09:40</div>
+              <template v-for="trip in providerRequests" :key="trip.id">
+                <article class="job-ping">
+                  <div class="job-kicker">
+                    <v-icon icon="mdi-bell-ring-outline" size="20" />
+                    คำขอใหม่
+                  </div>
+                  <strong>{{ trip.elderName }}</strong>
+                  <div>{{ dayLabel(trip.date) }} · {{ trip.time }} น.</div>
+                  <div>{{ tripPlaceName(trip) }} · {{ trip.department }}</div>
+                  <div>ครอบครัว{{ trip.familyName }}</div>
+                  <p>เหลือ {{ remainText(trip.respondBy, store.clock) }} หากไม่กด ระบบส่งต่องานให้คนอื่น</p>
+                  <div class="job-actions">
+                    <button type="button" class="job-accept" @click="acceptFromLine(trip)">รับงาน</button>
+                    <button type="button" class="job-decline" @click="declineFromLine(trip)">ปฏิเสธ</button>
+                  </div>
+                </article>
+                <div class="bubble-time">{{ noticeTime(trip.timeline[0]?.at ?? '') }}</div>
+              </template>
+              <template v-for="item in providerReplies" :key="item.id">
+                <div class="bubble bubble-oa">{{ item.text }}</div>
+                <div class="bubble-time">{{ item.time }}</div>
+              </template>
+              <div v-if="!providerRequests.length && !providerReplies.length" class="bubble bubble-oa">
+                ตอนนี้ไม่มีคำขอค้าง เปิดตารางด้านล่างเพื่อดูงานที่รับไว้
+              </div>
+            </div>
+            <div class="rich-menu">
+              <button type="button" @click="openCare('caregiver')">
+                <v-icon color="primary" icon="mdi-calendar-week" />
+                <span>ตาราง</span>
+              </button>
+              <button type="button" @click="openCare('caregiver-jobs')">
+                <v-icon color="primary" icon="mdi-clipboard-check-outline" />
+                <span>งานที่รับ</span>
+              </button>
+              <button type="button" @click="openCare('caregiver-history')">
+                <v-icon color="primary" icon="mdi-history" />
+                <span>ประวัติ</span>
+              </button>
+            </div>
+          </template>
+        </template>
       </div>
     </div>
   </v-container>
@@ -102,8 +149,8 @@
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
   import CareUpdateCard from '@/components/CareUpdateCard.vue'
   import { caregiverById, tripPlaceName } from '@/domain/data'
-  import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, PROVIDER_THAID } from '@/domain/model'
-  import CaregiverPage from '@/pages/caregiver.vue'
+  import { careUpdate, dayLabel, FAMILY, FAMILY_MEMBERS, familyStatusText, PROVIDER_THAID, remainText, SELF_CAREGIVER_ID } from '@/domain/model'
+  import type { Trip } from '@/domain/types'
   import { useCareStore } from '@/stores/care'
 
   const router = useRouter()
@@ -115,6 +162,8 @@
   const route = useRoute()
   const tab = ref<'user' | 'provider'>(route.query.side === 'provider' ? 'provider' : 'user')
   const chat = ref<HTMLElement | null>(null)
+  const providerChat = ref<HTMLElement | null>(null)
+  const providerReplies = ref<{ id: string; text: string; time: string }[]>([])
   const now = ref(new Date())
   let timer = 0
 
@@ -141,6 +190,10 @@
   const textNotices = computed(() =>
     store.lineNotices.filter(item => !item.card && !item.text.includes('เริ่มดูแล') && !item.text.includes('จบการดูแล')),
   )
+  const providerRequests = computed(() =>
+    store.trips.filter(trip => trip.caregiverId === SELF_CAREGIVER_ID && trip.status === 'requested'),
+  )
+
   const familyFeed = computed(() => {
     const steps = store.trips
       .filter(trip => trip.owner === 'me')
@@ -166,6 +219,12 @@
     if (tab.value !== 'user' || !verified.value) return
     await nextTick()
     chat.value?.querySelector('.line-card')?.scrollIntoView({ block: 'center' })
+  })
+
+  watch([tab, providerVerified, () => providerRequests.value.length], async () => {
+    if (tab.value !== 'provider' || !providerVerified.value) return
+    await nextTick()
+    providerChat.value?.querySelector('.job-ping')?.scrollIntoView({ block: 'center' })
   })
 
   onMounted(() => {
@@ -203,4 +262,87 @@
     store.role = 'caregiver'
     store.verifyThaid(PROVIDER_THAID.id)
   }
+
+  function openCare(name: 'caregiver' | 'caregiver-jobs' | 'caregiver-history') {
+    store.role = 'caregiver'
+    router.push({ name })
+  }
+
+  function acceptFromLine(trip: Trip) {
+    store.acceptTrip(trip.id)
+    providerReplies.value.push({
+      id: `${trip.id}-yes`,
+      text: `รับงานของ${trip.elderName}แล้ว เปิดตารางด้านล่างเพื่อดูเวลา`,
+      time: noticeTime(new Date().toISOString()),
+    })
+  }
+
+  function declineFromLine(trip: Trip) {
+    store.declineTrip(trip.id)
+    providerReplies.value.push({
+      id: `${trip.id}-no`,
+      text: `ปฏิเสธงานของ${trip.elderName}แล้ว ระบบส่งต่องานให้คนถัดไป`,
+      time: noticeTime(new Date().toISOString()),
+    })
+  }
 </script>
+
+<style scoped>
+  .job-ping {
+    max-width: 100%;
+    margin: 4px 0 2px;
+    padding: 14px;
+    border: 1.5px solid #a16207;
+    border-radius: 16px 16px 16px 4px;
+    background: #fffdf8;
+    color: #241c16;
+    line-height: 1.45;
+  }
+
+  .job-kicker {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    color: #7a4b05;
+    font-weight: 700;
+  }
+
+  .job-ping strong {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 1.125rem;
+  }
+
+  .job-ping p {
+    margin: 8px 0 0;
+    color: #5c3b06;
+  }
+
+  .job-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .job-actions button {
+    min-height: 44px;
+    border-radius: 12px;
+    padding: 8px 14px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .job-accept {
+    border: 0;
+    background: #0e6b62;
+    color: #fff;
+  }
+
+  .job-decline {
+    border: 1.5px solid #6f6256;
+    background: #fff;
+    color: #241c16;
+  }
+</style>

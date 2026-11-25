@@ -3,6 +3,7 @@ import type { CarePackageId, NeedId, ProviderTier, Quote, ServiceType, ShareBasi
 export const FAMILY = {
   displayName: 'คุณนภา วงศ์สุข',
   lineName: 'คุณนภา',
+  phone: '081-442-1908',
   pickup: '128/4 ซอยลาดพร้าว 41 แขวงจรเข้บัว เขตลาดพร้าว กรุงเทพฯ',
   lat: 13.7928,
   lng: 100.5852,
@@ -503,6 +504,15 @@ export function historyCompanions(trips: Trip[]) {
 
 export function isOpenStatus(status: TripStatus) {
   return status !== 'completed' && status !== 'cancelled'
+}
+
+/** งานที่รับแล้วและยังไม่จบ เลือกนัดของวันนี้ก่อน */
+export function liveCareTrip(trips: Trip[], caregiverId: string) {
+  const today = isoOffset(0)
+  const open = trips.filter(
+    trip => trip.caregiverId === caregiverId && isOpenStatus(trip.status) && trip.status !== 'requested',
+  )
+  return open.find(trip => trip.date === today) ?? [...open].sort((a, b) => tripStamp(a).localeCompare(tripStamp(b)))[0]
 }
 
 export function viewStatus(status: TripStatus, service: ServiceType): TripStatus {

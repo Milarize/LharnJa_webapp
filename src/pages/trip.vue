@@ -4,7 +4,7 @@
       class="mb-4"
       prepend-icon="mdi-arrow-left"
       variant="text"
-      :to="store.role === 'caregiver' ? { name: 'caregiver' } : { name: 'trips' }"
+      :to="backTo"
     >
       กลับ
     </v-btn>
@@ -12,7 +12,7 @@
     <div class="d-flex flex-wrap align-center ga-3 mb-2">
       <StatusChip :service="trip.serviceType" :status="trip.status" />
       <v-chip v-if="trip.repeatOf" color="primary" size="small" variant="tonal">จองซ้ำคนเดิม</v-chip>
-      <span class="text-body-medium text-medium-emphasis">{{ baht(trip.price) }} · ค่าผู้ดูแลที่โรงพยาบาล</span>
+      <span v-if="store.role !== 'caregiver'" class="text-body-medium text-medium-emphasis">{{ baht(trip.price) }} · ค่าผู้ดูแลที่โรงพยาบาล</span>
     </div>
     <h1 class="display-thai mb-1">{{ trip.elderName }}</h1>
     <p class="text-body-large text-medium-emphasis mb-6">
@@ -75,7 +75,21 @@
       </v-col>
 
       <v-col cols="12" md="5">
-        <v-card class="pa-4 mb-4" rounded="md" variant="outlined">
+        <v-card v-if="store.role === 'caregiver'" class="pa-4 mb-4" rounded="md" variant="outlined">
+          <div class="text-label-large text-medium-emphasis mb-3">ติดต่อฉุกเฉิน</div>
+          <div class="d-flex ga-3 align-center">
+            <v-avatar class="contact-avatar" size="56">{{ booker.initial }}</v-avatar>
+            <div>
+              <div class="text-title-medium font-weight-bold">{{ booker.name }}</div>
+              <div class="text-body-medium text-medium-emphasis">{{ booker.detail }}</div>
+            </div>
+          </div>
+          <button v-if="booker.phone" class="contact-phone" type="button" @click="fake('โทร')">
+            <v-icon icon="mdi-phone" size="26" />
+            <span>{{ booker.phone }}</span>
+          </button>
+        </v-card>
+        <v-card v-else class="pa-4 mb-4" rounded="md" variant="outlined">
           <div class="d-flex ga-3 align-center mb-3">
             <v-avatar size="56">
               <v-img v-if="caregiver" :alt="caregiver.nickname" cover :src="caregiver.photo" />
@@ -103,15 +117,13 @@
         </v-card>
 
         <v-card class="pa-4" rounded="md" variant="outlined">
-          <h2 class="text-title-large mb-2">สิ่งที่ผู้ดูแลควรรู้</h2>
-          <p class="text-body-medium mb-2">{{ trip.elderNote }}</p>
-          <p v-if="trip.note" class="text-body-medium mb-3">{{ trip.note }}</p>
-          <div v-if="trip.packageId" class="text-body-medium">{{ packageName(trip.packageId) }}</div>
-          <div class="text-body-medium">{{ SERVICES[trip.serviceType].label }}</div>
-          <div class="text-body-small text-medium-emphasis mb-3">{{ hospital?.name }} · {{ trip.department }}</div>
-          <div class="d-flex flex-wrap ga-2">
-            <v-chip v-for="need in trip.needs" :key="need" size="small" variant="tonal">{{ needLabel(need) }}</v-chip>
-          </div>
+          <h2 class="text-title-large mb-3">สิ่งที่ผู้ดูแลควรรู้</h2>
+          <ul class="know-list">
+            <li v-for="fact in knowFacts" :key="fact.text" :class="{ warn: fact.warn }">
+              <v-icon :icon="fact.icon" size="22" />
+              <span>{{ fact.text }}</span>
+            </li>
+          </ul>
         </v-card>
 
         <v-alert
@@ -127,9 +139,6 @@
           v-else-if="store.role === 'caregiver' && packageHasNotes(trip.packageId) && viewStatus(trip.status, trip.serviceType) === 'with_doctor'"
           class="mt-4"
         >
-          <p class="text-body-medium text-medium-emphasis mb-3">
-            ถึงขั้นช่วยฟังหมอแล้ว สรุปให้นัดนี้ที่นี่ แล้วค่อยจบงาน
-          </p>
           <FamilyNote :trip="trip" />
         </div>
         <v-alert
@@ -194,17 +203,18 @@
   import StatusChip from '@/components/StatusChip.vue'
   import VerifiedMark from '@/components/VerifiedMark.vue'
   import { caregiverById, hospitalById } from '@/domain/data'
-  import type { CarePackageId, TripStatus } from '@/domain/types'
+  import type { TripStatus } from '@/domain/types'
   import {
     baht,
-    carePackage,
     dayLabel,
-    needLabel,
     caregiverVerified,
     canRebookTrip,
+    FAMILY,
+    FAMILY_MEMBERS,
+    initialFromName,
     nextActionLabel,
+    NEED_OPTIONS,
     packageHasNotes,
-    SERVICES,
     statusFlow,
     statusLabel,
     viewStatus,
@@ -215,13 +225,14 @@
   import { useCareStore } from '@/stores/care'
 
   const store = useCareStore()
-
-  function packageName(id: CarePackageId) {
-    const item = carePackage(id)
-    return `${item.name} · ${baht(item.price)}`
-  }
   const route = useRoute()
   const trip = computed(() => store.trips.find(item => item.id === String(route.params.id)))
+  const backTo = computed(() => {
+    if (store.role !== 'caregiver') return { name: 'trips' as const }
+    if (trip.value?.status === 'requested') return { name: 'caregiver-requests' as const }
+    if (trip.value?.status === 'completed' || trip.value?.status === 'cancelled') return { name: 'caregiver-history' as const }
+    return { name: 'caregiver-jobs' as const }
+  })
   const hospital = computed(() => {
     if (!trip.value) return undefined
     return hospitalById(trip.value.hospitalId) ?? {
@@ -234,6 +245,42 @@
     }
   })
   const caregiver = computed(() => (trip.value ? caregiverById(trip.value.caregiverId) : undefined))
+  const booker = computed(() => {
+    const current = trip.value
+    if (current?.owner === 'me') {
+      const person = FAMILY_MEMBERS.find(item => item.id === FAMILY.memberId)
+      const name = person?.name ?? FAMILY.displayName
+      return {
+        name,
+        detail: person ? `${person.relation} · คนที่จองงานนี้` : 'คนที่จองงานนี้',
+        phone: FAMILY.phone,
+        initial: initialFromName(name),
+      }
+    }
+    const name = current?.familyName ?? ''
+    return { name, detail: 'คนที่จองงานนี้', phone: '', initial: initialFromName(name) }
+  })
+  const knowFacts = computed(() => {
+    if (!trip.value) return []
+    const facts: { icon: string; text: string; warn: boolean }[] = []
+    if (trip.value.note) facts.push({ icon: 'mdi-alert-outline', text: trip.value.note, warn: true })
+    for (const part of trip.value.elderNote.split('·').map(item => item.trim()).filter(Boolean)) {
+      const allergy = part.includes('แพ้')
+      const walking = part.includes('เดิน') || part.includes('ไม้เท้า')
+      facts.push({
+        icon: allergy ? 'mdi-alert-circle-outline' : walking ? 'mdi-walk' : 'mdi-heart-pulse',
+        text: part,
+        warn: allergy,
+      })
+    }
+    for (const id of trip.value.needs) {
+      const option = NEED_OPTIONS.find(item => item.id === id)
+      if (!option) continue
+      if (facts.some(fact => fact.text.includes('ไม้เท้า') && option.id === 'cane')) continue
+      facts.push({ icon: option.icon, text: option.label, warn: false })
+    }
+    return facts
+  })
   const flow = computed(() => (trip.value ? statusFlow(trip.value.serviceType, trip.value.packageId) : []))
   const currentIndex = computed(() =>
     trip.value ? flow.value.indexOf(viewStatus(trip.value.status, trip.value.serviceType)) : -1,
@@ -253,3 +300,69 @@
     store.notify(`ต้นแบบยังไม่${action}ออก ในของจริงจะติดต่อผ่านช่องทางที่ยืนยันตัวตนแล้ว`, false)
   }
 </script>
+
+<style scoped>
+  .know-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .know-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f7fbfa;
+    color: #241c16;
+    font-size: 1.05rem;
+    line-height: 1.4;
+  }
+
+  .know-list .warn {
+    background: #fff6e8;
+    color: #5c3b06;
+  }
+
+  .know-list :deep(.v-icon) {
+    margin-top: 1px;
+    color: #0e6b62;
+  }
+
+  .know-list .warn :deep(.v-icon) {
+    color: #a16207;
+  }
+
+  .contact-avatar {
+    background: #0e6b62;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+
+  .contact-phone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 14px;
+    background: #e7f3f1;
+    color: #0e6b62;
+    font: inherit;
+    font-size: 1.35rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .contact-phone :deep(.v-icon) {
+    color: #0e6b62;
+  }
+</style>

@@ -279,8 +279,7 @@
                 </span>
               </div>
               <BadgeMarks class="my-3" :badges="item.caregiver.badges" />
-              <div class="d-flex justify-space-between align-center">
-                <div class="text-title-medium font-weight-bold">{{ baht(selectedPackage.price) }}</div>
+              <div class="d-flex justify-end">
                 <v-chip color="primary" variant="flat">
                   {{ caregiverId === item.caregiver.id ? 'เลือกแล้ว' : 'เลือก' }}
                 </v-chip>

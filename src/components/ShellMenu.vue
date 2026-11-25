@@ -19,7 +19,11 @@
         rounded="lg"
         :title="item.title"
         :to="{ name: item.name }"
-      />
+      >
+        <template v-if="item.name === 'caregiver-requests' && requestCount" #append>
+          <span class="nav-count">{{ requestCount }}</span>
+        </template>
+      </v-list-item>
     </v-list>
 
     <v-spacer />
@@ -48,5 +52,20 @@
 <script setup lang="ts">
   import { useShell } from '@/composables/useShell'
 
-  const { items, isActive, store } = useShell()
+  const { items, isActive, store, requestCount } = useShell()
 </script>
+
+<style scoped>
+  .nav-count {
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #a16207;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+</style>

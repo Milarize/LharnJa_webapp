@@ -23,6 +23,10 @@ const router = createRouter({
     { path: '/plans', redirect: { name: 'plans' } },
     { path: '/history', name: 'history', component: History },
     { path: '/caregiver', name: 'caregiver', component: Caregiver },
+    { path: '/caregiver/requests', name: 'caregiver-requests', component: Caregiver },
+    { path: '/caregiver/jobs', name: 'caregiver-jobs', component: Caregiver },
+    { path: '/caregiver/live', name: 'caregiver-live', component: Caregiver },
+    { path: '/caregiver/history', name: 'caregiver-history', component: Caregiver },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
@@ -35,7 +39,11 @@ const titles: Record<string, string> = {
   trip: 'สถานะนัด · หลานจ๋า',
   plans: 'แพ็กเกจ · หลานจ๋า',
   history: 'ประวัติ · หลานจ๋า',
-  caregiver: 'งานของผู้ดูแล · หลานจ๋า',
+  caregiver: 'ตารางงาน · หลานจ๋า',
+  'caregiver-requests': 'คำขอใหม่ · หลานจ๋า',
+  'caregiver-jobs': 'งานที่รับแล้ว · หลานจ๋า',
+  'caregiver-live': 'กำลังดูแล · หลานจ๋า',
+  'caregiver-history': 'ประวัติงาน · หลานจ๋า',
 }
 
 router.afterEach(to => {

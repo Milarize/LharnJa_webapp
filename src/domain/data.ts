@@ -315,3 +315,42 @@ export function createSeed() {
 
   return { elders, trips }
 }
+
+/** เลื่อนนัดชุดสาธิตให้ “วันนี้” ของข้อมูลตรงกับวันปัจจุบัน โดยไม่แตะนัดที่ผู้ใช้สร้างเอง */
+export function alignSeedToToday(trips: Trip[]) {
+  const seeded = createSeed().trips
+  for (const fresh of seeded) {
+    const trip = trips.find(item => item.id === fresh.id)
+    if (!trip || trip.date === fresh.date) continue
+    const days = dayDelta(trip.date, fresh.date)
+    trip.date = fresh.date
+    for (const event of trip.timeline) event.at = shiftClock(event.at, days)
+    if (trip.respondBy) trip.respondBy = shiftClock(trip.respondBy, days)
+    for (const hop of trip.handoffs ?? []) hop.at = shiftClock(hop.at, days)
+    if (trip.visitNote?.sentAt) trip.visitNote.sentAt = shiftClock(trip.visitNote.sentAt, days)
+    if (trip.visitNote?.followUpDate && /^\d{4}-\d{2}-\d{2}$/.test(trip.visitNote.followUpDate)) {
+      trip.visitNote.followUpDate = shiftDay(trip.visitNote.followUpDate, days)
+    }
+  }
+}
+
+function dayDelta(fromIso: string, toIso: string) {
+  const from = new Date(`${fromIso}T12:00:00`).getTime()
+  const to = new Date(`${toIso}T12:00:00`).getTime()
+  return Math.round((to - from) / 86_400_000)
+}
+
+function shiftClock(iso: string, days: number) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
+
+function shiftDay(iso: string, days: number) {
+  const date = new Date(`${iso}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return iso
+  date.setDate(date.getDate() + days)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}

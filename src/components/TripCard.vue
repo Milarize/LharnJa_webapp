@@ -1,5 +1,5 @@
 <template>
-  <v-card class="pa-4 lift" rounded="md" variant="outlined" @click="open">
+  <v-card class="pa-4 lift" :class="tone ? `tone-${tone}` : undefined" rounded="md" variant="outlined" @click="open">
     <div class="d-flex justify-space-between align-start ga-3">
       <div class="flex-grow-1" style="min-width: 0">
         <StatusChip :service="trip.serviceType" :status="trip.status" />
@@ -14,7 +14,6 @@
           ครอบครัว{{ trip.familyName }} · {{ serviceLabel }} · {{ SERVICES[trip.serviceType].hours }}
         </div>
         <p v-if="audience === 'caregiver'" class="text-body-small mt-2 mb-0">
-          รับครั้งนี้ {{ baht(trip.price) }} เหมาจ่าย
           งานคืออยู่ดูแลในสถานพยาบาล ไม่ถือเงิน ไม่ติดต่อผู้สูงอายุส่วนตัว และไม่ทำหัตถการ
         </p>
         <div v-else class="text-body-small text-medium-emphasis mt-1">
@@ -43,6 +42,7 @@
   const props = defineProps<{
     trip: Trip
     audience?: 'family' | 'caregiver'
+    tone?: 'request' | 'accepted'
   }>()
 
   const router = useRouter()
@@ -54,3 +54,17 @@
     router.push({ name: 'trip', params: { id: props.trip.id } })
   }
 </script>
+
+<style scoped>
+  .v-card.tone-request {
+    background: #fffdf8;
+    border-color: #a16207;
+    box-shadow: inset 5px 0 0 #a16207;
+  }
+
+  .v-card.tone-accepted {
+    background: #f7fbfa;
+    border-color: #0e6b62;
+    box-shadow: inset 5px 0 0 #0e6b62;
+  }
+</style>

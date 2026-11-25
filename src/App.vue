@@ -42,35 +42,46 @@
       <router-view v-else />
     </v-main>
 
-    <nav v-if="showBottom && bookItem" class="dock" aria-label="เมนูหลัก">
+    <nav v-if="showBottom && centerItem" class="dock" aria-label="เมนูหลัก">
+      <div class="dock-side">
+        <router-link
+          v-for="item in leftItems"
+          :key="item.name"
+          class="dock-link"
+          :class="{ 'is-active': activeNav === item.name }"
+          :aria-current="activeNav === item.name ? 'page' : undefined"
+          :to="{ name: item.name }"
+        >
+          <v-icon :icon="item.icon" size="24" />
+          <span>{{ item.title }}</span>
+        </router-link>
+      </div>
       <router-link
-        v-for="item in leftItems"
-        :key="item.name"
-        class="dock-link"
-        :class="{ 'is-active': activeNav === item.name }"
-        :aria-current="activeNav === item.name ? 'page' : undefined"
-        :to="{ name: item.name }"
+        class="dock-book"
+        :class="{ 'is-active': activeNav === centerItem.name }"
+        :aria-current="activeNav === centerItem.name ? 'page' : undefined"
+        :aria-label="centerItem.title"
+        :to="{ name: centerItem.name }"
       >
-        <v-icon :icon="item.icon" size="24" />
-        <span>{{ item.title }}</span>
-      </router-link>
-      <router-link class="dock-book" :to="{ name: bookItem.name }" aria-label="จอง">
         <span class="dock-book-face">
-          <v-icon icon="mdi-calendar-plus" size="30" />
+          <v-icon :icon="centerItem.icon" size="30" />
+          <span v-if="centerItem.name === 'caregiver-requests' && requestCount" class="dock-count">{{ requestCount }}</span>
         </span>
-        <span class="dock-book-label">จอง</span>
+        <span class="dock-book-label">{{ centerItem.title }}</span>
       </router-link>
-      <router-link
-        v-for="item in rightItems"
-        :key="item.name"
-        class="dock-link"
-        :class="{ 'is-active': activeNav === item.name }"
-        :aria-current="activeNav === item.name ? 'page' : undefined"
-        :to="{ name: item.name }"
-      >
-        <v-icon :icon="item.icon" size="24" />
-        <span>{{ item.title }}</span>
-      </router-link>
+      <div class="dock-side">
+        <router-link
+          v-for="item in rightItems"
+          :key="item.name"
+          class="dock-link"
+          :class="{ 'is-active': activeNav === item.name }"
+          :aria-current="activeNav === item.name ? 'page' : undefined"
+          :to="{ name: item.name }"
+        >
+          <v-icon :icon="item.icon" size="24" />
+          <span>{{ item.title }}</span>
+        </router-link>
+      </div>
     </nav>
     <nav v-else-if="showBottom" class="dock dock-plain" aria-label="เมนูหลัก">
       <router-link
@@ -118,18 +129,27 @@
   import { useShell } from '@/composables/useShell'
 
   const { mdAndUp } = useDisplay()
-  const { store, route, items, activeNav, onRole } = useShell()
+  const { store, route, items, activeNav, onRole, requestCount } = useShell()
   const isLine = computed(() => route.name === 'line')
   const showBottom = computed(() => !mdAndUp.value && !isLine.value && route.name !== 'book')
-  const bookItem = computed(() => items.value.find(item => item.name === 'book'))
-  const sideItems = computed(() => items.value.filter(item => item.name !== 'book'))
-  const leftItems = computed(() => sideItems.value.slice(0, Math.ceil(sideItems.value.length / 2)))
-  const rightItems = computed(() => sideItems.value.slice(Math.ceil(sideItems.value.length / 2)))
+  const centerItem = computed(() => items.value.find(item => item.center))
+  const sideItems = computed(() => items.value.filter(item => !item.center))
+  const aroundCenter = computed(() => {
+    const index = items.value.findIndex(item => item.center)
+    if (index < 0) return { left: items.value, right: [] as typeof items.value }
+    const left = items.value.slice(0, index)
+    const right = items.value.slice(index + 1)
+    if (left.length === right.length || left.length + 1 === right.length) return { left, right }
+    const mid = Math.ceil(sideItems.value.length / 2)
+    return { left: sideItems.value.slice(0, mid), right: sideItems.value.slice(mid) }
+  })
+  const leftItems = computed(() => aroundCenter.value.left)
+  const rightItems = computed(() => aroundCenter.value.right)
 
   watch(
     () => route.name,
     name => {
-      if (name === 'caregiver') store.role = 'caregiver'
+      if (typeof name === 'string' && name.startsWith('caregiver')) store.role = 'caregiver'
       if (name === 'home' || name === 'book' || name === 'trips' || name === 'history' || name === 'plans') {
         store.role = 'family'
       }
@@ -153,9 +173,8 @@
     right: 0;
     bottom: 0;
     left: 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr auto 1fr 1fr;
-    align-items: stretch;
+    display: flex;
+    align-items: flex-end;
     height: calc(74px + env(safe-area-inset-bottom));
     padding: 0 6px env(safe-area-inset-bottom);
     overflow: visible;
@@ -164,9 +183,36 @@
     box-shadow: 0 -10px 28px rgba(36, 28, 22, 0.08);
   }
 
+  .dock-side {
+    display: flex;
+    flex: 1;
+    align-items: flex-end;
+    justify-content: space-around;
+    min-width: 0;
+  }
+
   .dock-plain {
-    grid-template-columns: 1fr;
     align-items: center;
+  }
+
+  .dock-plain .dock-link {
+    flex: 1;
+  }
+
+  .dock-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    display: grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #a16207;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
   }
 
   .dock-link,
