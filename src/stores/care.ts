@@ -1,7 +1,7 @@
 import { ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { Elder, ProviderTier, Role, Trip, TripStatus, VisitNote } from '@/domain/types'
-import { caregiverById, createSeed, tripPlaceName } from '@/domain/data'
+import { alignSeedToToday, caregiverById, createSeed, tripPlaceName } from '@/domain/data'
 import { rankCaregivers } from '@/domain/match'
 import { careUpdate, FAMILY, FAMILY_MEMBERS, familyStatusText, initialFromName, nextStatus, noteGaps, noteMessage, packageHasNotes, PROVIDER_TIERS, RESPOND_MS, SEED_RESPOND_MS, statusLabel, uid } from '@/domain/model'
 
@@ -121,6 +121,7 @@ export const useCareStore = defineStore('care', () => {
             ? data.lineNotices.filter(item => item && typeof item.id === 'string' && typeof item.text === 'string')
             : []
           restoreSentNotes()
+          alignSeedToToday(trips.value)
           return
         }
       }

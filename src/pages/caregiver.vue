@@ -9,7 +9,7 @@
     @confirm="store.verifyThaid(PROVIDER_THAID.id)"
   />
   <div v-else>
-    <v-card class="pa-5 mb-6" color="primary" rounded="md">
+    <v-card v-if="section === 'schedule'" class="pa-5 mb-6" color="primary" rounded="md">
       <div class="d-flex align-center ga-3">
         <v-avatar size="72">
           <v-img v-if="me" :alt="me.nickname" cover :src="me.photo" />
@@ -29,6 +29,7 @@
       <BadgeMarks class="mt-3" :badges="me?.badges" />
     </v-card>
 
+    <template v-if="section === 'schedule'">
     <h2 class="text-title-large font-weight-medium mb-3">ตารางงานของฉัน</h2>
     <div class="teams mb-8">
       <div class="teams-nav">
@@ -70,14 +71,11 @@
         </div>
       </div>
     </div>
+    </template>
 
-    <section class="lane lane-ask mb-8">
-      <header>
-        <v-icon icon="mdi-inbox-arrow-down" size="26" />
-        <h2 class="text-title-large font-weight-medium">คำขอใหม่</h2>
-        <span class="lane-count">{{ requests.length }}</span>
-      </header>
-      <div v-if="requests.length" class="d-flex flex-column ga-3">
+    <template v-else-if="section === 'requests'">
+      <h2 class="text-title-large font-weight-medium mb-3">คำขอใหม่</h2>
+      <div v-if="requests.length" class="d-flex flex-column ga-3 mb-8">
         <TripCard v-for="trip in requests" :key="trip.id" audience="caregiver" tone="request" :trip="trip">
           <div class="d-flex flex-wrap ga-2 mt-4">
             <v-btn color="primary" @click.stop="store.acceptTrip(trip.id)">รับงาน</v-btn>
@@ -89,9 +87,50 @@
           </p>
         </TripCard>
       </div>
-      <p v-else class="text-body-medium mb-0">ไม่มีคำขอที่รออยู่</p>
-    </section>
+      <p v-else class="text-body-medium text-medium-emphasis mb-8">ไม่มีคำขอที่รออยู่</p>
+    </template>
 
+    <template v-else-if="section === 'live'">
+      <h2 class="text-title-large font-weight-medium mb-3">กำลังดูแล</h2>
+      <article v-if="live" class="live-job mb-8">
+        <div class="live-kicker">
+          <v-icon icon="mdi-heart-pulse" size="22" />
+          กำลังดำเนินการวันนี้
+        </div>
+        <StatusChip class="mt-3" :service="live.serviceType" :status="live.status" />
+        <h3 class="text-headline-small mt-3 mb-1">{{ live.elderName }}</h3>
+        <p class="text-body-large mb-1">{{ dayLabel(live.date) }} · {{ live.time }} น.</p>
+        <p class="text-body-medium mb-4">{{ tripPlaceName(live) }} · {{ live.department }}</p>
+        <ol class="live-steps">
+          <li
+            v-for="(step, index) in liveSteps"
+            :key="step"
+            :class="{ done: index < liveIndex, now: index === liveIndex }"
+          >
+            {{ statusLabel(step, live.serviceType) }}
+          </li>
+        </ol>
+        <div class="d-flex flex-wrap ga-2 mt-4">
+          <v-btn
+            v-if="needsSummary(live)"
+            color="primary"
+            :to="{ name: 'trip', params: { id: live.id } }"
+          >
+            ไปสรุปให้ลูกหลาน
+          </v-btn>
+          <v-btn
+            v-else-if="nextActionLabel(live.status, live.serviceType, live.packageId)"
+            color="primary"
+            @click="store.advanceTrip(live.id)"
+          >
+            {{ nextActionLabel(live.status, live.serviceType, live.packageId) }}
+          </v-btn>
+        </div>
+      </article>
+      <p v-else class="text-body-medium text-medium-emphasis mb-8">ตอนนี้ไม่มีงานที่กำลังดูแล</p>
+    </template>
+
+    <template v-else-if="section === 'jobs'">
     <div v-if="store.lineNotices.length" class="d-flex flex-column ga-2 mb-6">
       <h2 class="text-title-large font-weight-medium">แจ้งเตือนถึงครอบครัว</h2>
       <v-alert
@@ -105,14 +144,9 @@
       </v-alert>
     </div>
 
-    <section class="lane lane-mine mb-8">
-      <header>
-        <v-icon icon="mdi-clipboard-check-outline" size="26" />
-        <h2 class="text-title-large font-weight-medium">งานที่รับแล้ว</h2>
-        <span class="lane-count">{{ active.length }}</span>
-      </header>
-      <div v-if="active.length" class="d-flex flex-column ga-3">
-        <TripCard v-for="trip in active" :key="trip.id" audience="caregiver" tone="accepted" :trip="trip">
+    <h2 class="text-title-large font-weight-medium mb-3">งานที่รับแล้ว</h2>
+    <div v-if="active.length" class="d-flex flex-column ga-3 mb-8">
+      <TripCard v-for="trip in active" :key="trip.id" audience="caregiver" tone="accepted" :trip="trip">
         <div class="d-flex flex-wrap ga-2 mt-4">
           <v-btn
             v-if="needsSummary(trip)"
@@ -139,24 +173,42 @@
           </v-btn>
         </div>
       </TripCard>
+    </div>
+    <p v-else class="text-body-medium text-medium-emphasis mb-8">ยังไม่มีงานที่รับไว้</p>
+    </template>
+
+    <template v-else>
+      <h2 class="text-title-large font-weight-medium mb-3">ประวัติงาน</h2>
+      <div v-if="past.length" class="d-flex flex-column ga-3 mb-8">
+        <TripCard v-for="trip in past" :key="trip.id" audience="caregiver" :trip="trip" />
       </div>
-      <p v-else class="text-body-medium mb-0">ยังไม่มีงานที่รับไว้</p>
-    </section>
+      <p v-else class="text-body-medium text-medium-emphasis mb-8">ยังไม่มีงานที่จบแล้ว</p>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
   import { computed, ref } from 'vue'
+  import { useRoute } from 'vue-router'
   import BadgeMarks from '@/components/BadgeMarks.vue'
+  import StatusChip from '@/components/StatusChip.vue'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
   import TripCard from '@/components/TripCard.vue'
   import VerifiedMark from '@/components/VerifiedMark.vue'
   import { caregiverById, tripPlaceName } from '@/domain/data'
   import type { Trip } from '@/domain/types'
-  import { isoOffset, isOpenStatus, nextActionLabel, packageHasNotes, PROVIDER_THAID, remainText, SELF_CAREGIVER_ID, tripStamp, viewStatus } from '@/domain/model'
+  import { dayLabel, isoOffset, isOpenStatus, liveCareTrip, nextActionLabel, packageHasNotes, PROVIDER_THAID, remainText, SELF_CAREGIVER_ID, statusFlow, statusLabel, tripStamp, viewStatus } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
   const store = useCareStore()
+  const route = useRoute()
+  const section = computed(() => {
+    if (route.name === 'caregiver-requests') return 'requests'
+    if (route.name === 'caregiver-live') return 'live'
+    if (route.name === 'caregiver-jobs') return 'jobs'
+    if (route.name === 'caregiver-history') return 'history'
+    return 'schedule'
+  })
   const me = computed(() => caregiverById(SELF_CAREGIVER_ID))
   const mine = computed(() => store.trips.filter(trip => trip.caregiverId === SELF_CAREGIVER_ID))
   const requests = computed(() => mine.value.filter(trip => trip.status === 'requested'))
@@ -164,6 +216,18 @@
     mine.value
       .filter(trip => isOpenStatus(trip.status) && trip.status !== 'requested')
       .sort((a, b) => tripStamp(a).localeCompare(tripStamp(b))),
+  )
+  const live = computed(() => liveCareTrip(store.trips, SELF_CAREGIVER_ID))
+  const liveSteps = computed(() =>
+    live.value ? statusFlow(live.value.serviceType, live.value.packageId).filter(step => step !== 'requested') : [],
+  )
+  const liveIndex = computed(() =>
+    live.value ? liveSteps.value.indexOf(viewStatus(live.value.status, live.value.serviceType)) : -1,
+  )
+  const past = computed(() =>
+    mine.value
+      .filter(trip => trip.status === 'completed' || trip.status === 'cancelled')
+      .sort((a, b) => tripStamp(b).localeCompare(tripStamp(a))),
   )
   const schedule = computed(() =>
     mine.value
@@ -267,53 +331,47 @@
 </script>
 
 <style scoped>
-  .lane {
+  .live-job {
+    padding: 20px;
+    border: 1.5px solid #0e6b62;
     border-radius: 20px;
-    padding: 16px;
+    background: #f7fbfa;
   }
 
-  .lane header {
+  .live-kicker {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .lane h2 {
-    margin: 0;
-  }
-
-  .lane-count {
-    display: grid;
-    place-items: center;
-    min-width: 28px;
-    height: 28px;
-    padding: 0 8px;
-    border-radius: 999px;
-    font-size: 0.95rem;
+    color: #0e6b62;
+    font-size: 1.05rem;
     font-weight: 700;
   }
 
-  .lane-ask {
-    background: #fff6e8;
-    border: 1.5px solid #a16207;
-    color: #5c3b06;
+  .live-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
-  .lane-ask .lane-count {
-    background: #a16207;
-    color: #fff;
+  .live-steps li {
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #fff;
+    color: #6f6256;
   }
 
-  .lane-mine {
+  .live-steps .done {
     background: #e7f3f1;
-    border: 1.5px solid #0e6b62;
-    color: #143f3b;
+    color: #0e6b62;
   }
 
-  .lane-mine .lane-count {
+  .live-steps .now {
     background: #0e6b62;
     color: #fff;
+    font-weight: 700;
   }
 
   .teams {

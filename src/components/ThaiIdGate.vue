@@ -61,7 +61,7 @@
   const steps = computed(() =>
     props.kind === 'provider'
       ? [
-          { icon: 'mdi-clipboard-check-outline', title: 'รับงานที่ชัดเจน', text: 'เห็นโรงพยาบาล แผนก และรายได้ก่อนกดรับ' },
+          { icon: 'mdi-clipboard-check-outline', title: 'รับงานที่ชัดเจน', text: 'เห็นโรงพยาบาลและแผนกก่อนกดรับ' },
           { icon: 'mdi-hospital-building', title: 'อยู่ดูแลที่โรงพยาบาล', text: 'เริ่มดูแลจนจบงาน ไม่ต้องออกไปรับ' },
           { icon: 'mdi-note-text-outline', title: 'สรุปให้ลูกหลาน', text: 'เลือกข้อความสั้น ๆ ส่งเข้า LINE' },
         ]

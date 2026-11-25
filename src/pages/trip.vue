@@ -4,7 +4,7 @@
       class="mb-4"
       prepend-icon="mdi-arrow-left"
       variant="text"
-      :to="store.role === 'caregiver' ? { name: 'caregiver' } : { name: 'trips' }"
+      :to="backTo"
     >
       กลับ
     </v-btn>
@@ -12,7 +12,7 @@
     <div class="d-flex flex-wrap align-center ga-3 mb-2">
       <StatusChip :service="trip.serviceType" :status="trip.status" />
       <v-chip v-if="trip.repeatOf" color="primary" size="small" variant="tonal">จองซ้ำคนเดิม</v-chip>
-      <span class="text-body-medium text-medium-emphasis">{{ baht(trip.price) }} · ค่าผู้ดูแลที่โรงพยาบาล</span>
+      <span v-if="store.role !== 'caregiver'" class="text-body-medium text-medium-emphasis">{{ baht(trip.price) }} · ค่าผู้ดูแลที่โรงพยาบาล</span>
     </div>
     <h1 class="display-thai mb-1">{{ trip.elderName }}</h1>
     <p class="text-body-large text-medium-emphasis mb-6">
@@ -106,7 +106,9 @@
           <h2 class="text-title-large mb-2">สิ่งที่ผู้ดูแลควรรู้</h2>
           <p class="text-body-medium mb-2">{{ trip.elderNote }}</p>
           <p v-if="trip.note" class="text-body-medium mb-3">{{ trip.note }}</p>
-          <div v-if="trip.packageId" class="text-body-medium">{{ packageName(trip.packageId) }}</div>
+          <div v-if="trip.packageId" class="text-body-medium">
+            {{ store.role === 'caregiver' ? carePackage(trip.packageId).name : packageName(trip.packageId) }}
+          </div>
           <div class="text-body-medium">{{ SERVICES[trip.serviceType].label }}</div>
           <div class="text-body-small text-medium-emphasis mb-3">{{ hospital?.name }} · {{ trip.department }}</div>
           <div class="d-flex flex-wrap ga-2">
@@ -222,6 +224,12 @@
   }
   const route = useRoute()
   const trip = computed(() => store.trips.find(item => item.id === String(route.params.id)))
+  const backTo = computed(() => {
+    if (store.role !== 'caregiver') return { name: 'trips' as const }
+    if (trip.value?.status === 'requested') return { name: 'caregiver-requests' as const }
+    if (trip.value?.status === 'completed' || trip.value?.status === 'cancelled') return { name: 'caregiver-history' as const }
+    return { name: 'caregiver-jobs' as const }
+  })
   const hospital = computed(() => {
     if (!trip.value) return undefined
     return hospitalById(trip.value.hospitalId) ?? {

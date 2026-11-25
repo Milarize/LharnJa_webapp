@@ -14,7 +14,6 @@
           ครอบครัว{{ trip.familyName }} · {{ serviceLabel }} · {{ SERVICES[trip.serviceType].hours }}
         </div>
         <p v-if="audience === 'caregiver'" class="text-body-small mt-2 mb-0">
-          รับครั้งนี้ {{ baht(trip.price) }} เหมาจ่าย
           งานคืออยู่ดูแลในสถานพยาบาล ไม่ถือเงิน ไม่ติดต่อผู้สูงอายุส่วนตัว และไม่ทำหัตถการ
         </p>
         <div v-else class="text-body-small text-medium-emphasis mt-1">
