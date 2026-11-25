@@ -1,5 +1,5 @@
 <template>
-  <v-card class="pa-4 lift" rounded="md" variant="outlined" @click="open">
+  <v-card class="pa-4 lift" :class="tone ? `tone-${tone}` : undefined" rounded="md" variant="outlined" @click="open">
     <div class="d-flex justify-space-between align-start ga-3">
       <div class="flex-grow-1" style="min-width: 0">
         <StatusChip :service="trip.serviceType" :status="trip.status" />
@@ -43,6 +43,7 @@
   const props = defineProps<{
     trip: Trip
     audience?: 'family' | 'caregiver'
+    tone?: 'request' | 'accepted'
   }>()
 
   const router = useRouter()
@@ -54,3 +55,17 @@
     router.push({ name: 'trip', params: { id: props.trip.id } })
   }
 </script>
+
+<style scoped>
+  .v-card.tone-request {
+    background: #fffdf8;
+    border-color: #a16207;
+    box-shadow: inset 5px 0 0 #a16207;
+  }
+
+  .v-card.tone-accepted {
+    background: #f7fbfa;
+    border-color: #0e6b62;
+    box-shadow: inset 5px 0 0 #0e6b62;
+  }
+</style>

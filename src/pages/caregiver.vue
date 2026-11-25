@@ -30,44 +30,67 @@
     </v-card>
 
     <h2 class="text-title-large font-weight-medium mb-3">ตารางงานของฉัน</h2>
-    <div v-if="schedule.length" class="schedule mb-8">
-      <article v-for="trip in schedule" :key="trip.id" class="schedule-item">
-        <div class="schedule-when">
-          <strong>{{ trip.time }}</strong>
-          <span>{{ dayLabel(trip.date) }}</span>
+    <div class="teams mb-8">
+      <div class="teams-nav">
+        <v-btn aria-label="อาทิตย์ก่อน" icon="mdi-chevron-left" size="small" variant="text" @click="shiftWeek(-1)" />
+        <div class="teams-range">
+          <strong>{{ viewingThisWeek ? 'อาทิตย์นี้' : weekLabel }}</strong>
+          <span v-if="viewingThisWeek">{{ weekLabel }}</span>
+          <button v-else class="teams-back" type="button" @click="weekStart = startOfWeek(new Date())">กลับอาทิตย์นี้</button>
         </div>
-        <div class="schedule-body">
-          <div class="text-title-medium font-weight-bold">{{ trip.elderName }}</div>
-          <div class="text-body-small text-medium-emphasis">{{ tripPlaceName(trip) }} · {{ trip.department }}</div>
-          <StatusChip class="mt-2" :service="trip.serviceType" :status="trip.status" />
-          <div v-if="trip.status !== 'requested'" class="schedule-steps">
-            <span
-              v-for="step in stepsFor(trip)"
-              :key="step"
-              :class="{ 'is-done': stepIndex(trip) > stepsFor(trip).indexOf(step), 'is-now': stepIndex(trip) === stepsFor(trip).indexOf(step) }"
-            >
-              {{ statusLabel(step, trip.serviceType) }}
-            </span>
+        <v-btn aria-label="อาทิตย์หน้า" icon="mdi-chevron-right" size="small" variant="text" @click="shiftWeek(1)" />
+      </div>
+      <div class="teams-scroll">
+        <div class="teams-head">
+          <div></div>
+          <div v-for="day in calendarDays" :key="day.iso" class="teams-date" :class="{ 'is-today': day.today }">
+            <span>{{ day.weekday }}</span>
+            <strong>{{ day.number }}</strong>
           </div>
         </div>
-      </article>
-    </div>
-    <p v-else class="text-body-medium text-medium-emphasis mb-8">ยังไม่มีงานในตาราง</p>
-
-    <h2 class="text-title-large font-weight-medium mb-3">คำขอใหม่</h2>
-    <div v-if="requests.length" class="d-flex flex-column ga-3 mb-8">
-      <TripCard v-for="trip in requests" :key="trip.id" audience="caregiver" :trip="trip">
-        <div class="d-flex flex-wrap ga-2 mt-4">
-          <v-btn color="primary" @click.stop="store.acceptTrip(trip.id)">รับงาน</v-btn>
-          <v-btn variant="text" @click.stop="store.declineTrip(trip.id)">ปฏิเสธ</v-btn>
+        <div class="teams-grid" :style="{ height: `${gridHours.length * HOUR}px` }">
+          <div class="teams-times">
+            <span v-for="hour in gridHours" :key="hour">{{ pad(hour) }}:00</span>
+          </div>
+          <div v-for="day in calendarDays" :key="day.iso" class="teams-col" :class="{ 'is-today': day.today }">
+            <i v-for="hour in gridHours" :key="hour" class="teams-line"></i>
+            <router-link
+              v-for="block in day.blocks"
+              :key="block.trip.id"
+              class="teams-event"
+              :class="`is-${block.trip.status}`"
+              :style="{ top: `${block.top}px`, height: `${block.height}px` }"
+              :to="{ name: 'trip', params: { id: block.trip.id } }"
+            >
+              <strong>{{ block.trip.elderName }}</strong>
+              <span class="teams-when"><span>{{ block.trip.time }}</span><span class="teams-dash">–</span><span>{{ block.end }}</span></span>
+              <span class="teams-place">{{ tripPlaceName(block.trip) }}</span>
+            </router-link>
+          </div>
         </div>
-        <p class="text-body-small mt-3 mb-0">
-          เหลือ {{ remainText(trip.respondBy, store.clock) }} หากไม่กดรับหรือกดปฏิเสธ โปรแกรมส่งงานต่อให้คนอื่น
-          คุณไม่ต้องไปและไม่ได้รับค่าตอบแทน
-        </p>
-      </TripCard>
+      </div>
     </div>
-    <p v-else class="text-body-medium text-medium-emphasis mb-8">ไม่มีคำขอที่รออยู่</p>
+
+    <section class="lane lane-ask mb-8">
+      <header>
+        <v-icon icon="mdi-inbox-arrow-down" size="26" />
+        <h2 class="text-title-large font-weight-medium">คำขอใหม่</h2>
+        <span class="lane-count">{{ requests.length }}</span>
+      </header>
+      <div v-if="requests.length" class="d-flex flex-column ga-3">
+        <TripCard v-for="trip in requests" :key="trip.id" audience="caregiver" tone="request" :trip="trip">
+          <div class="d-flex flex-wrap ga-2 mt-4">
+            <v-btn color="primary" @click.stop="store.acceptTrip(trip.id)">รับงาน</v-btn>
+            <v-btn variant="text" @click.stop="store.declineTrip(trip.id)">ปฏิเสธ</v-btn>
+          </div>
+          <p class="text-body-small mt-3 mb-0">
+            เหลือ {{ remainText(trip.respondBy, store.clock) }} หากไม่กดรับหรือกดปฏิเสธ โปรแกรมส่งงานต่อให้คนอื่น
+            คุณไม่ต้องไปและไม่ได้รับค่าตอบแทน
+          </p>
+        </TripCard>
+      </div>
+      <p v-else class="text-body-medium mb-0">ไม่มีคำขอที่รออยู่</p>
+    </section>
 
     <div v-if="store.lineNotices.length" class="d-flex flex-column ga-2 mb-6">
       <h2 class="text-title-large font-weight-medium">แจ้งเตือนถึงครอบครัว</h2>
@@ -82,9 +105,14 @@
       </v-alert>
     </div>
 
-    <h2 class="text-title-large font-weight-medium mb-3">งานที่รับแล้ว</h2>
-    <div v-if="active.length" class="d-flex flex-column ga-3 mb-8">
-      <TripCard v-for="trip in active" :key="trip.id" audience="caregiver" :trip="trip">
+    <section class="lane lane-mine mb-8">
+      <header>
+        <v-icon icon="mdi-clipboard-check-outline" size="26" />
+        <h2 class="text-title-large font-weight-medium">งานที่รับแล้ว</h2>
+        <span class="lane-count">{{ active.length }}</span>
+      </header>
+      <div v-if="active.length" class="d-flex flex-column ga-3">
+        <TripCard v-for="trip in active" :key="trip.id" audience="caregiver" tone="accepted" :trip="trip">
         <div class="d-flex flex-wrap ga-2 mt-4">
           <v-btn
             v-if="needsSummary(trip)"
@@ -111,21 +139,21 @@
           </v-btn>
         </div>
       </TripCard>
-    </div>
-    <p v-else class="text-body-medium text-medium-emphasis mb-8">ยังไม่มีงานที่รับไว้</p>
+      </div>
+      <p v-else class="text-body-medium mb-0">ยังไม่มีงานที่รับไว้</p>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { computed } from 'vue'
+  import { computed, ref } from 'vue'
   import BadgeMarks from '@/components/BadgeMarks.vue'
-  import StatusChip from '@/components/StatusChip.vue'
   import ThaiIdGate from '@/components/ThaiIdGate.vue'
   import TripCard from '@/components/TripCard.vue'
   import VerifiedMark from '@/components/VerifiedMark.vue'
   import { caregiverById, tripPlaceName } from '@/domain/data'
   import type { Trip } from '@/domain/types'
-  import { dayLabel, isOpenStatus, nextActionLabel, packageHasNotes, PROVIDER_THAID, remainText, SELF_CAREGIVER_ID, statusFlow, statusLabel, tripStamp, viewStatus } from '@/domain/model'
+  import { isoOffset, isOpenStatus, nextActionLabel, packageHasNotes, PROVIDER_THAID, remainText, SELF_CAREGIVER_ID, tripStamp, viewStatus } from '@/domain/model'
   import { useCareStore } from '@/stores/care'
 
   const store = useCareStore()
@@ -143,12 +171,94 @@
       .sort((a, b) => tripStamp(a).localeCompare(tripStamp(b))),
   )
 
-  function stepsFor(trip: Trip) {
-    return statusFlow(trip.serviceType, trip.packageId).filter(step => step !== 'requested')
+  const HOUR = 48
+  const GRID_START = 8
+
+  function startOfWeek(date: Date) {
+    const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12)
+    copy.setDate(copy.getDate() - copy.getDay())
+    return copy
   }
 
-  function stepIndex(trip: Trip) {
-    return stepsFor(trip).indexOf(viewStatus(trip.status, trip.serviceType))
+  const weekStart = ref(startOfWeek(new Date()))
+
+  const viewingThisWeek = computed(() => toIso(weekStart.value) === toIso(startOfWeek(new Date())))
+
+  const weekLabel = computed(() => {
+    const start = weekStart.value
+    const end = new Date(start)
+    end.setDate(end.getDate() + 6)
+    const year = new Intl.DateTimeFormat('th-TH', { year: 'numeric' }).format(end)
+    if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+      const month = new Intl.DateTimeFormat('th-TH', { month: 'short' }).format(start)
+      return `${start.getDate()}–${end.getDate()} ${month} ${year}`
+    }
+    const dayMonth = new Intl.DateTimeFormat('th-TH', { day: 'numeric', month: 'short' })
+    return `${dayMonth.format(start)} – ${dayMonth.format(end)} ${year}`
+  })
+
+  function shiftWeek(delta: number) {
+    const next = new Date(weekStart.value)
+    next.setDate(next.getDate() + delta * 7)
+    weekStart.value = next
+  }
+
+  const calendarDays = computed(() => {
+    const today = isoOffset(0)
+    const byDay = new Map<string, Trip[]>()
+    for (const trip of schedule.value) {
+      const list = byDay.get(trip.date) ?? []
+      list.push(trip)
+      byDay.set(trip.date, list)
+    }
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(weekStart.value)
+      date.setDate(date.getDate() + index)
+      const iso = toIso(date)
+      return {
+        iso,
+        today: iso === today,
+        weekday: new Intl.DateTimeFormat('th-TH', { weekday: 'short' }).format(date),
+        number: date.getDate(),
+        blocks: (byDay.get(iso) ?? []).map(trip => {
+          const start = minutes(trip.time)
+          const length = (trip.packageId === 'p1' ? 4 : 8) * 60
+          return {
+            trip,
+            top: ((start - GRID_START * 60) / 60) * HOUR,
+            height: Math.max((length / 60) * HOUR - 4, 36),
+            end: clockLabel(start + length),
+          }
+        }),
+      }
+    })
+  })
+
+  const gridHours = computed(() => {
+    const latest = calendarDays.value
+      .flatMap(day => day.blocks)
+      .reduce((max, block) => Math.max(max, block.top + block.height), 0)
+    const end = Math.max(18, GRID_START + Math.ceil(latest / HOUR))
+    return Array.from({ length: end - GRID_START }, (_, index) => GRID_START + index)
+  })
+
+  function minutes(time: string) {
+    const [hour, minute] = time.split(':').map(Number)
+    return hour * 60 + (minute || 0)
+  }
+
+  function clockLabel(total: number) {
+    const hour = Math.floor(total / 60) % 24
+    const minute = total % 60
+    return `${pad(hour)}:${pad(minute)}`
+  }
+
+  function pad(value: number) {
+    return String(value).padStart(2, '0')
+  }
+
+  function toIso(date: Date) {
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
   }
 
   function needsSummary(trip: Trip) {
@@ -157,63 +267,256 @@
 </script>
 
 <style scoped>
-  .schedule {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+  .lane {
+    border-radius: 20px;
+    padding: 16px;
   }
 
-  .schedule-item {
+  .lane header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .lane h2 {
+    margin: 0;
+  }
+
+  .lane-count {
     display: grid;
-    grid-template-columns: 72px 1fr;
-    gap: 10px;
+    place-items: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 700;
   }
 
-  .schedule-when {
+  .lane-ask {
+    background: #fff6e8;
+    border: 1.5px solid #a16207;
+    color: #5c3b06;
+  }
+
+  .lane-ask .lane-count {
+    background: #a16207;
+    color: #fff;
+  }
+
+  .lane-mine {
+    background: #e7f3f1;
+    border: 1.5px solid #0e6b62;
+    color: #143f3b;
+  }
+
+  .lane-mine .lane-count {
+    background: #0e6b62;
+    color: #fff;
+  }
+
+  .teams {
+    container-type: inline-size;
+    border: 1.5px solid #6f6256;
+    border-radius: 16px;
+    background: #fffcf8;
+    overflow: hidden;
+  }
+
+  .teams-scroll {
+    max-height: 560px;
+    overflow: auto;
+  }
+
+  .teams-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 6px 2px;
+  }
+
+  .teams-range {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    padding-top: 2px;
+    align-items: center;
+    line-height: 1.35;
+    text-align: center;
   }
 
-  .schedule-when strong {
-    font-size: 1.125rem;
-  }
-
-  .schedule-when span {
-    color: #4e4842;
-    font-size: 1rem;
-  }
-
-  .schedule-body {
-    border-left: 3px solid #0e6b62;
-    background: white;
-    border-radius: 0 14px 14px 0;
-    padding: 10px 12px;
-  }
-
-  .schedule-steps {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 8px;
-  }
-
-  .schedule-steps span {
-    border-radius: 999px;
-    background: #f3eee6;
-    color: #4e4842;
-    font-size: 0.9375rem;
-    padding: 2px 8px;
-  }
-
-  .schedule-steps .is-done {
-    background: #e7f3f1;
+  .teams-range strong {
     color: #0e6b62;
+    font-size: 1.05rem;
   }
 
-  .schedule-steps .is-now {
+  .teams-range span,
+  .teams-back {
+    color: #5c534c;
+    font-size: 0.95rem;
+  }
+
+  .teams-back {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .teams-head,
+  .teams-grid {
+    display: grid;
+    grid-template-columns: 48px repeat(7, minmax(0, 1fr));
+  }
+
+  @container (max-width: 720px) {
+    .teams-date {
+      gap: 0;
+      padding: 8px 0 8px;
+      font-size: 0.75rem;
+    }
+
+    .teams-date strong {
+      width: 26px;
+      height: 26px;
+      font-size: 0.9rem;
+    }
+
+    .teams-event {
+      right: 2px;
+      left: 2px;
+      padding: 3px 2px;
+    }
+
+    .teams-event strong,
+    .teams-event .teams-place {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+
+    .teams-event .teams-when {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.68rem;
+    }
+
+    .teams-event .teams-when span {
+      white-space: nowrap;
+    }
+
+    .teams-dash {
+      display: none;
+    }
+  }
+
+  .teams-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fffcf8;
+    border-bottom: 1px solid #e4d8c8;
+  }
+
+  .teams-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 6px 12px;
+    color: #5c534c;
+    font-size: 0.95rem;
+  }
+
+  .teams-date strong {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #241c16;
+    font-size: 1.05rem;
+  }
+
+  .teams-date.is-today strong {
     background: #0e6b62;
-    color: white;
+    color: #fff;
+  }
+
+  .teams-grid {
+    position: relative;
+  }
+
+  .teams-times,
+  .teams-col {
+    position: relative;
+  }
+
+  .teams-times span,
+  .teams-line {
+    display: block;
+    height: 48px;
+    box-sizing: border-box;
+  }
+
+  .teams-times span {
+    padding: 2px 8px 0 0;
+    color: #6f6256;
+    font-size: 0.8rem;
+    line-height: 1;
+    text-align: right;
+  }
+
+  .teams-line {
+    border-top: 1px solid #eadfce;
+  }
+
+  .teams-col + .teams-col,
+  .teams-times + .teams-col {
+    border-left: 1px solid #eadfce;
+  }
+
+  .teams-col.is-today {
+    background: #f4faf8;
+  }
+
+  .teams-event {
+    position: absolute;
+    right: 4px;
+    left: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    padding: 4px 5px;
+    border-radius: 6px;
+    border-left: 4px solid #0e6b62;
+    background: #e7f3f1;
+    color: #241c16;
+    text-decoration: none;
+  }
+
+  .teams-event strong {
+    font-size: 0.85rem;
+    line-height: 1.25;
+  }
+
+  .teams-event span {
+    color: #3f3832;
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .teams-event.is-completed {
+    border-left-color: #8a7b6b;
+    background: #f3eee6;
+  }
+
+  .teams-event.is-requested {
+    border-left-style: dashed;
+    background: #fff6e8;
   }
 </style>
